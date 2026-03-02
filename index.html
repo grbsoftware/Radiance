@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Radiance">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Radiance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+        }
+        
+        .palette {
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 120px);
+        }
+        
+        .color-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+        
+        .color-bar:active {
+            opacity: 0.85;
+        }
+        
+        .hex-code {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .bar-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.6;
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .anchor .bar-label::after {
+            content: ' ✎';
+        }
+        
+        .copied-toast {
+            position: fixed;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        
+        .copied-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .controls {
+            background: #000;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            border-top: 1px solid #222;
+        }
+        
+        .controls button {
+            background: #222;
+            color: #fff;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        
+        .controls button:active {
+            background: #444;
+        }
+        
+        .controls button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .color-count {
+            color: #888;
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .bottom-bar {
+            background: #000;
+            padding: 16px 24px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        }
+        
+        .all-codes {
+            color: #888;
+            font-size: 11px;
+            font-family: 'SF Mono', Monaco, monospace;
+            letter-spacing: 0.5px;
+            user-select: all;
+            -webkit-user-select: all;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+        
+        .color-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            left: 0;
+            top: 0;
+        }
+        
+        .preset-btn {
+            margin-left: auto;
+        }
+        
+        .presets-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #111;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 200;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .presets-panel.open {
+            transform: translateY(0);
+        }
+        
+        .presets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .presets-header button {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        .preset-group {
+            margin-bottom: 20px;
+        }
+        
+        .preset-group-title {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .preset-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .preset-item:active {
+            background: #2a2a2a;
+        }
+        
+        .preset-swatches {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+        
+        .preset-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+        
+        .preset-name {
+            color: #888;
+            font-size: 12px;
+            margin-left: 12px;
+            min-width: 80px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="palette" id="palette"></div>
+    
+    <div class="controls">
+        <button id="btn-remove">−</button>
+        <span class="color-count" id="color-count">5 colors</span>
+        <button id="btn-add">+</button>
+        <button id="btn-presets" class="preset-btn">☰</button>
+    </div>
+    
+    <div class="presets-panel" id="presets-panel">
+        <div class="presets-header">
+            <span>Presets</span>
+            <button id="btn-close-presets">✕</button>
+        </div>
+        <div class="presets-list" id="presets-list"></div>
+    </div>
+    
+    <div class="bottom-bar" id="bottom-bar">
+        <span class="all-codes" id="all-codes"></span>
+    </div>
+    
+    <div class="copied-toast" id="toast">Copied!</div>
+    
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+        
+        // State: anchors array (2-5 anchors = 3-9 total colors)
+        let anchors = generateEvenHues(3);
+        
+        // Generate evenly spaced hues around 360°
+        function generateEvenHues(count) {
+            const hues = [];
+            const step = 360 / count;
+            for (let i = 0; i < count; i++) {
+                const hue = Math.round(i * step);
+                hues.push(hslToHex(hue, 100, 50));
+            }
+            return hues;
+        }
+        
+        // HSL to Hex
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+        }
+        
+        // Parse hex to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+        
+        // RGB to hex
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => {
+                const hex = Math.round(x).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('').toUpperCase();
+        }
+        
+        // Calculate midpoint between two colors in HSL space
+        function midpointColor(hex1, hex2) {
+            const hsl1 = hexToHsl(hex1);
+            const hsl2 = hexToHsl(hex2);
+            
+            // Handle hue interpolation (shortest path around the circle)
+            let h1 = hsl1.h;
+            let h2 = hsl2.h;
+            let hDiff = h2 - h1;
+            
+            // Take the shortest path around the hue circle
+            if (hDiff > 180) {
+                h1 += 360;
+            } else if (hDiff < -180) {
+                h2 += 360;
+            }
+            
+            const midH = ((h1 + h2) / 2) % 360;
+            const midS = (hsl1.s + hsl2.s) / 2;
+            const midL = (hsl1.l + hsl2.l) / 2;
+            
+            return hslToHex(midH, midS, midL);
+        }
+        
+        // Hex to HSL
+        function hexToHsl(hex) {
+            const rgb = hexToRgb(hex);
+            const r = rgb.r / 255;
+            const g = rgb.g / 255;
+            const b = rgb.b / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+                    case g: h = ((b - r) / d + 2) * 60; break;
+                    case b: h = ((r - g) / d + 4) * 60; break;
+                }
+            }
+            
+            return { h, s: s * 100, l: l * 100 };
+        }
+        
+        // Get luminance to determine text color
+        function getLuminance(hex) {
+            const rgb = hexToRgb(hex);
+            const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+            return luminance;
+        }
+        
+        // Generate full palette (anchors + bridges)
+        function generatePalette() {
+            const palette = [];
+            for (let i = 0; i < anchors.length; i++) {
+                palette.push({ color: anchors[i], isAnchor: true, anchorIndex: i });
+                if (i < anchors.length - 1) {
+                    const bridge = midpointColor(anchors[i], anchors[i + 1]);
+                    palette.push({ color: bridge, isAnchor: false });
+                }
+            }
+            return palette;
+        }
+        
+        // Render the palette
+        function render() {
+            const palette = generatePalette();
+            const container = document.getElementById('palette');
+            container.innerHTML = '';
+            
+            palette.forEach((item, index) => {
+                const bar = document.createElement('div');
+                bar.className = `color-bar ${item.isAnchor ? 'anchor' : 'bridge'}`;
+                bar.style.backgroundColor = item.color;
+                bar.dataset.hex = item.color.replace('#', '');
+                
+                const textColor = getLuminance(item.color) > 0.5 ? '#000' : '#fff';
+                
+                bar.innerHTML = `
+                    <span class="hex-code" style="color: ${textColor}">${item.color.replace('#', '')}</span>
+                    <span class="bar-label" style="color: ${textColor}">${item.isAnchor ? 'Anchor' : 'Auto'}</span>
+                    ${item.isAnchor ? `<input type="color" class="color-input" value="${item.color}" data-anchor-index="${item.anchorIndex}">` : ''}
+                `;
+                
+                if (item.isAnchor) {
+                    const input = bar.querySelector('input');
+                    input.addEventListener('input', (e) => {
+                        anchors[item.anchorIndex] = e.target.value.toUpperCase();
+                        render();
+                        saveState();
+                    });
+                } else {
+                    bar.addEventListener('click', () => {
+                        const hex = '#' + bar.dataset.hex;
+                        navigator.clipboard.writeText(hex).then(() => {
+                            showToast(`Copied ${hex}`);
+                        });
+                    });
+                }
+                
+                container.appendChild(bar);
+            });
+            
+            // Update bottom bar
+            const allHex = palette.map(p => '#' + p.color.replace('#', '')).join(', ');
+            document.getElementById('all-codes').textContent = allHex;
+            
+            // Update count display
+            const totalColors = palette.length;
+            document.getElementById('color-count').textContent = `${totalColors} colors`;
+            
+            // Update button states (2 anchors = 3 total, 5 anchors = 9 total)
+            document.getElementById('btn-remove').disabled = anchors.length <= 2;
+            document.getElementById('btn-add').disabled = anchors.length >= 5;
+        }
+        
+        // Show toast
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+        
+        // Save state to localStorage
+        function saveState() {
+            localStorage.setItem('radiance-anchors', JSON.stringify(anchors));
+        }
+        
+        // Load state from localStorage
+        function loadState() {
+            const saved = localStorage.getItem('radiance-anchors');
+            if (saved) {
+                anchors = JSON.parse(saved);
+            }
+        }
+        
+        // Add colors (+1 anchor = +2 total)
+        function addColors() {
+            if (anchors.length < 5) {
+                anchors = generateEvenHues(anchors.length + 1);
+                render();
+                saveState();
+            }
+        }
+        
+        // Remove colors (-1 anchor = -2 total)
+        function removeColors() {
+            if (anchors.length > 2) {
+                anchors = generateEvenHues(anchors.length - 1);
+                render();
+                saveState();
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('btn-add').addEventListener('click', addColors);
+        document.getElementById('btn-remove').addEventListener('click', removeColors);
+        
+        // Preset palettes - large curated library
+        // Keyed by anchor count: 2=3 total, 3=5 total, 4=7 total, 5=9 total
+        const presets = {
+            2: [
+                { name: 'Fire & Ice', colors: ['#FF4500', '#00CED1'] },
+                { name: 'Day & Night', colors: ['#FFD700', '#191970'] },
+                { name: 'Forest', colors: ['#228B22', '#8B4513'] },
+                { name: 'Ocean', colors: ['#006994', '#40E0D0'] },
+                { name: 'Sunset', colors: ['#FF6B6B', '#4ECDC4'] },
+                { name: 'Berry', colors: ['#8B008B', '#FF69B4'] },
+                { name: 'Earth', colors: ['#DAA520', '#2F4F4F'] },
+                { name: 'Neon', colors: ['#FF1493', '#00FF7F'] },
+            ],
+            3: [
+                { name: 'Primary', colors: ['#FF0000', '#FFFF00', '#0000FF'] },
+                { name: 'Secondary', colors: ['#FF8000', '#00FF00', '#8000FF'] },
+                { name: 'Pastel', colors: ['#FFB6C1', '#98FB98', '#87CEEB'] },
+                { name: 'Sunset', colors: ['#FF6B6B', '#FFE66D', '#4ECDC4'] },
+                { name: 'Neon', colors: ['#FF1493', '#00FF7F', '#00BFFF'] },
+                { name: 'Earthy', colors: ['#8B4513', '#228B22', '#4682B4'] },
+                { name: 'Vintage', colors: ['#DC143C', '#DAA520', '#008080'] },
+                { name: 'Candy', colors: ['#FF69B4', '#FFD700', '#00CED1'] },
+                { name: 'Forest', colors: ['#006400', '#8B4513', '#F4A460'] },
+                { name: 'Ocean', colors: ['#000080', '#20B2AA', '#F0E68C'] },
+                { name: 'Berry', colors: ['#8B0000', '#FF1493', '#9400D3'] },
+                { name: 'Tropical', colors: ['#FF4500', '#32CD32', '#1E90FF'] },
+            ],
+            4: [
+                { name: 'Jewel', colors: ['#9B2335', '#F5DF4D', '#009473', '#0F4C81'] },
+                { name: 'Retro', colors: ['#FF6F61', '#88B04B', '#6B5B95', '#F7CAC9'] },
+                { name: 'Ocean', colors: ['#003B46', '#07575B', '#66A5AD', '#C4DFE6'] },
+                { name: 'Autumn', colors: ['#8B0000', '#FF8C00', '#FFD700', '#006400'] },
+                { name: 'Candy', colors: ['#FF6B6B', '#FEC89A', '#90EE90', '#DDA0DD'] },
+                { name: 'Nordic', colors: ['#2E4057', '#048A81', '#54C6EB', '#F8F4E3'] },
+                { name: 'Sunset', colors: ['#F9C80E', '#F86624', '#EA3546', '#662E9B'] },
+                { name: 'Forest', colors: ['#1B4332', '#2D6A4F', '#52B788', '#D8F3DC'] },
+                { name: 'Dusk', colors: ['#22223B', '#4A4E69', '#9A8C98', '#C9ADA7'] },
+                { name: 'Tropical', colors: ['#F72585', '#7209B7', '#3A0CA3', '#4CC9F0'] },
+            ],
+            5: [
+                { name: 'Rainbow', colors: ['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#8000FF'] },
+                { name: 'Warm', colors: ['#FF0000', '#FF4500', '#FF8C00', '#FFD700', '#FFFF00'] },
+                { name: 'Cool', colors: ['#00CED1', '#20B2AA', '#3CB371', '#2E8B57', '#006400'] },
+                { name: 'Berry', colors: ['#8B008B', '#9932CC', '#BA55D3', '#DA70D6', '#FF69B4'] },
+                { name: 'Coastal', colors: ['#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8', '#FFDDD2'] },
+                { name: 'Vintage', colors: ['#D62828', '#F77F00', '#FCBF49', '#EAE2B7', '#003049'] },
+                { name: 'Neon', colors: ['#FF00FF', '#FF1493', '#00FFFF', '#00FF00', '#FFFF00'] },
+                { name: 'Earth', colors: ['#5C4033', '#8B4513', '#DAA520', '#6B8E23', '#2F4F4F'] },
+                { name: 'Pastel', colors: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF'] },
+                { name: 'Moody', colors: ['#10002B', '#240046', '#3C096C', '#5A189A', '#7B2CBF'] },
+                { name: 'Citrus', colors: ['#FF595E', '#FFCA3A', '#8AC926', '#1982C4', '#6A4C93'] },
+                { name: 'Sunset', colors: ['#03071E', '#370617', '#9D0208', '#DC2F02', '#FFBA08'] },
+            ]
+        };
+        
+        // Build presets panel
+        function buildPresetsPanel() {
+            const list = document.getElementById('presets-list');
+            list.innerHTML = '';
+            
+            const currentCount = anchors.length;
+            const relevantPresets = presets[currentCount] || presets[3];
+            
+            // Add "Even Hues" default
+            const evenGroup = document.createElement('div');
+            evenGroup.className = 'preset-group';
+            evenGroup.innerHTML = `<div class="preset-group-title">Generated</div>`;
+            
+            const evenItem = document.createElement('div');
+            evenItem.className = 'preset-item';
+            const evenColors = generateEvenHues(currentCount);
+            evenItem.innerHTML = `
+                <div class="preset-swatches">
+                    ${evenColors.map(c => `<div class="preset-swatch" style="background:${c}"></div>`).join('')}
+                </div>
+                <span class="preset-name">Even Hues</span>
+            `;
+            evenItem.addEventListener('click', () => {
+                anchors = evenColors;
+                render();
+                saveState();
+                closePresets();
+            });
+            evenGroup.appendChild(evenItem);
+            list.appendChild(evenGroup);
+            
+            // Add curated presets
+            if (relevantPresets) {
+                const totalColors = currentCount * 2 - 1; // anchors + bridges
+                const curatedGroup = document.createElement('div');
+                curatedGroup.className = 'preset-group';
+                curatedGroup.innerHTML = `<div class="preset-group-title">${totalColors}-Color Palettes</div>`;
+                
+                relevantPresets.forEach(preset => {
+                    const item = document.createElement('div');
+                    item.className = 'preset-item';
+                    item.innerHTML = `
+                        <div class="preset-swatches">
+                            ${preset.colors.map(c => `<div class="preset-swatch" style="background:${c}"></div>`).join('')}
+                        </div>
+                        <span class="preset-name">${preset.name}</span>
+                    `;
+                    item.addEventListener('click', () => {
+                        anchors = [...preset.colors];
+                        render();
+                        saveState();
+                        closePresets();
+                    });
+                    curatedGroup.appendChild(item);
+                });
+                list.appendChild(curatedGroup);
+            }
+        }
+        
+        // Presets panel controls
+        function openPresets() {
+            buildPresetsPanel();
+            document.getElementById('presets-panel').classList.add('open');
+        }
+        
+        function closePresets() {
+            document.getElementById('presets-panel').classList.remove('open');
+        }
+        
+        document.getElementById('btn-presets').addEventListener('click', openPresets);
+        document.getElementById('btn-close-presets').addEventListener('click', closePresets);
+        
+        // Init
+        loadState();
+        render();
+    </script>
+</body>
+</html>
