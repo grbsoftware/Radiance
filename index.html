@@ -340,8 +340,9 @@
         // hues range over 0.41 in perceived lightness (red 0.628, green 0.866,
         // blue 0.452), which is why a "smooth" ramp never looked smooth.
         //
-        // hexToHsl is kept -- the color picker still edits in HSL, which is a
-        // fine thing to TYPE in. It is just not a thing to average in.
+        // hslToHex stays, for the initial evenly-spaced anchors. HSL is a fine
+        // thing to SPECIFY a starting color in. It is just not a thing to
+        // average in, and nothing averages in it any more.
 
         function srgbToLinear(c) {
             c /= 255;
@@ -393,32 +394,6 @@
                 a: (c1.a + c2.a) / 2,
                 b: (c1.b + c2.b) / 2
             });
-        }
-        
-        // Hex to HSL
-        function hexToHsl(hex) {
-            const rgb = hexToRgb(hex);
-            const r = rgb.r / 255;
-            const g = rgb.g / 255;
-            const b = rgb.b / 255;
-            
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            let h, s, l = (max + min) / 2;
-            
-            if (max === min) {
-                h = s = 0;
-            } else {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
-                    case g: h = ((b - r) / d + 2) * 60; break;
-                    case b: h = ((r - g) / d + 4) * 60; break;
-                }
-            }
-            
-            return { h, s: s * 100, l: l * 100 };
         }
         
         // Get luminance to determine text color
@@ -520,42 +495,59 @@
         // had picked and reset to saturated evenly-spaced hues. You could not
         // build a 4-anchor palette at all: getting there wiped the 3 you had.
         //
-        // Now they extend and trim. Adding continues the palette's own hue
-        // rhythm from the last anchor, keeping its saturation and lightness so
-        // the new color belongs to the set rather than arriving at full neon.
-        function averageHueStep() {
-            if (anchors.length < 2) return 360 / (anchors.length + 1);
-            let total = 0;
-            for (let i = 1; i < anchors.length; i++) {
-                let d = hexToHsl(anchors[i]).h - hexToHsl(anchors[i - 1]).h;
-                // Shortest way round, same convention as the bridges use.
-                if (d > 180) d -= 360;
-                if (d < -180) d += 360;
-                total += d;
-            }
-            const step = total / (anchors.length - 1);
-            // Anchors that share a hue give a step of 0, which would stack the
-            // new color exactly on the old one and look like nothing happened.
-            return Math.abs(step) < 1 ? 360 / (anchors.length + 1) : step;
+        // The first attempt at fixing that APPENDED a new anchor, continuing the
+        // palette's hue rhythm past the last one. That is wrong for the case
+        // that matters most: the default anchors sit at hues 0, 120 and 240, so
+        // the step is 120 and the "next" hue is 360 -- which is 0, the first
+        // anchor again. Going to 9 colors produced repeats instead of a
+        // rainbow. A palette that already spans the circle has no next
+        // position; continuing the rhythm can only wrap onto itself.
+        //
+        // So the new anchor is INSERTED rather than appended, into the widest
+        // gap. That cannot repeat, because it lands strictly between two
+        // different colors; it preserves the palette's span, because the
+        // endpoints never move; and it is the least surprising thing on screen,
+        // because the value inserted is the bridge that was already sitting
+        // there -- press + and the bridge you were looking at simply becomes an
+        // anchor you can edit. Nothing else shifts.
+
+        // Perceptual distance, so "widest gap" means the gap that LOOKS widest.
+        // Hue distance would call red->green and green->blue equal at 120
+        // degrees each when the eye does not read them that way at all.
+        function oklabDistance(hex1, hex2) {
+            const c1 = hexToOklab(hex1);
+            const c2 = hexToOklab(hex2);
+            return Math.hypot(c1.L - c2.L, c1.a - c2.a, c1.b - c2.b);
         }
 
         function addColors() {
-            if (anchors.length < 5) {
-                const last = hexToHsl(anchors[anchors.length - 1]);
-                const h = ((last.h + averageHueStep()) % 360 + 360) % 360;
-                anchors = anchors.concat(hslToHex(h, last.s, last.l));
-                render();
-                saveState();
+            if (anchors.length >= 5) return;
+            let at = 0, widest = -1;
+            for (let i = 0; i < anchors.length - 1; i++) {
+                const d = oklabDistance(anchors[i], anchors[i + 1]);
+                if (d > widest) { widest = d; at = i; }
             }
+            const bridge = midpointColor(anchors[at], anchors[at + 1]);
+            anchors = anchors.slice(0, at + 1).concat(bridge, anchors.slice(at + 1));
+            render();
+            saveState();
         }
 
-        // Remove colors (-1 anchor = -2 total)
+        // Remove colors (-1 anchor = -2 total). The inverse of the above: drop
+        // the interior anchor that is doing the least work -- the one closest to
+        // being the midpoint of its own neighbours, since a bridge would land
+        // almost exactly there anyway. Endpoints are never removed, so the
+        // palette keeps its span instead of collapsing from one end.
         function removeColors() {
-            if (anchors.length > 2) {
-                anchors = anchors.slice(0, -1);
-                render();
-                saveState();
+            if (anchors.length <= 2) return;
+            let at = anchors.length - 1, least = Infinity;
+            for (let i = 1; i < anchors.length - 1; i++) {
+                const d = oklabDistance(anchors[i], midpointColor(anchors[i - 1], anchors[i + 1]));
+                if (d < least) { least = d; at = i; }
             }
+            anchors = anchors.filter((_, i) => i !== at);
+            render();
+            saveState();
         }
         
         // Event listeners
