@@ -1,7 +1,9 @@
 // BUMP THIS ON EVERY RELEASE. The fetch handler below is cache-first, so an
 // installed copy serves its cached index.html forever and never sees a fix --
 // the activate handler only clears caches whose name no longer matches.
-const CACHE_NAME = 'radiance-v3';
+// Bump this on EVERY release. The fetch handler is cache-first, so an installed
+// copy will serve its cached index.html forever and never see a fix otherwise.
+const CACHE_NAME = 'radiance-v4';
 const urlsToCache = [
   '/',
   '/index.html',
