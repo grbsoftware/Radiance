@@ -325,28 +325,74 @@
             }).join('').toUpperCase();
         }
         
-        // Calculate midpoint between two colors in HSL space
+        // --- OKLab -------------------------------------------------------
+        // A bridge is only a bridge if it LOOKS halfway between its anchors,
+        // and HSL cannot promise that. HSL's "L" is not perceived lightness:
+        // averaging green (#00FF00) and blue (#0000FF) in HSL gives cyan
+        // (#00FFFF), which is LIGHTER than both colors it sits between. It
+        // does not bridge, it spikes. Measured in perceptual lightness the
+        // anchors are 0.866 and 0.452, so the midpoint should read 0.659 --
+        // HSL puts it at 0.905, off by 0.246.
+        //
+        // OKLab is built so that equal numeric steps look like equal steps.
+        // The same pair midpoints to #00AABF at 0.675, which is where the eye
+        // expects it. Same idea for the anchors themselves: evenly spaced HSL
+        // hues range over 0.41 in perceived lightness (red 0.628, green 0.866,
+        // blue 0.452), which is why a "smooth" ramp never looked smooth.
+        //
+        // hexToHsl is kept -- the color picker still edits in HSL, which is a
+        // fine thing to TYPE in. It is just not a thing to average in.
+
+        function srgbToLinear(c) {
+            c /= 255;
+            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        function linearToSrgb(c) {
+            const v = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+            return Math.max(0, Math.min(255, v * 255));
+        }
+
+        function hexToOklab(hex) {
+            const rgb = hexToRgb(hex);
+            const r = srgbToLinear(rgb.r), g = srgbToLinear(rgb.g), b = srgbToLinear(rgb.b);
+
+            const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+            const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+            const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+
+            const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+
+            return {
+                L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+                a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+                b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+            };
+        }
+
+        function oklabToHex(lab) {
+            const l_ = lab.L + 0.3963377774 * lab.a + 0.2158037573 * lab.b;
+            const m_ = lab.L - 0.1055613458 * lab.a - 0.0638541728 * lab.b;
+            const s_ = lab.L - 0.0894841775 * lab.a - 1.2914855480 * lab.b;
+
+            const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+
+            return rgbToHex(
+                linearToSrgb(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+                linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+                linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+            );
+        }
+
+        // Calculate midpoint between two colors in OKLab space
         function midpointColor(hex1, hex2) {
-            const hsl1 = hexToHsl(hex1);
-            const hsl2 = hexToHsl(hex2);
-            
-            // Handle hue interpolation (shortest path around the circle)
-            let h1 = hsl1.h;
-            let h2 = hsl2.h;
-            let hDiff = h2 - h1;
-            
-            // Take the shortest path around the hue circle
-            if (hDiff > 180) {
-                h1 += 360;
-            } else if (hDiff < -180) {
-                h2 += 360;
-            }
-            
-            const midH = ((h1 + h2) / 2) % 360;
-            const midS = (hsl1.s + hsl2.s) / 2;
-            const midL = (hsl1.l + hsl2.l) / 2;
-            
-            return hslToHex(midH, midS, midL);
+            const c1 = hexToOklab(hex1);
+            const c2 = hexToOklab(hex2);
+            return oklabToHex({
+                L: (c1.L + c2.L) / 2,
+                a: (c1.a + c2.a) / 2,
+                b: (c1.b + c2.b) / 2
+            });
         }
         
         // Hex to HSL
@@ -469,18 +515,44 @@
         }
         
         // Add colors (+1 anchor = +2 total)
+        // Both of these used to call generateEvenHues(), which REPLACES the
+        // whole anchor array -- so pressing + or - threw away every color you
+        // had picked and reset to saturated evenly-spaced hues. You could not
+        // build a 4-anchor palette at all: getting there wiped the 3 you had.
+        //
+        // Now they extend and trim. Adding continues the palette's own hue
+        // rhythm from the last anchor, keeping its saturation and lightness so
+        // the new color belongs to the set rather than arriving at full neon.
+        function averageHueStep() {
+            if (anchors.length < 2) return 360 / (anchors.length + 1);
+            let total = 0;
+            for (let i = 1; i < anchors.length; i++) {
+                let d = hexToHsl(anchors[i]).h - hexToHsl(anchors[i - 1]).h;
+                // Shortest way round, same convention as the bridges use.
+                if (d > 180) d -= 360;
+                if (d < -180) d += 360;
+                total += d;
+            }
+            const step = total / (anchors.length - 1);
+            // Anchors that share a hue give a step of 0, which would stack the
+            // new color exactly on the old one and look like nothing happened.
+            return Math.abs(step) < 1 ? 360 / (anchors.length + 1) : step;
+        }
+
         function addColors() {
             if (anchors.length < 5) {
-                anchors = generateEvenHues(anchors.length + 1);
+                const last = hexToHsl(anchors[anchors.length - 1]);
+                const h = ((last.h + averageHueStep()) % 360 + 360) % 360;
+                anchors = anchors.concat(hslToHex(h, last.s, last.l));
                 render();
                 saveState();
             }
         }
-        
+
         // Remove colors (-1 anchor = -2 total)
         function removeColors() {
             if (anchors.length > 2) {
-                anchors = generateEvenHues(anchors.length - 1);
+                anchors = anchors.slice(0, -1);
                 render();
                 saveState();
             }
