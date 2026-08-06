@@ -279,6 +279,84 @@
             line-height: 1.5;
             margin-top: 10px;
         }
+
+        /* --- Wide viewports ---------------------------------------------
+           All of the above is a phone layout, applied unconditionally: a
+           column of bars, controls beneath, and panels that slide up OVER
+           the palette. On a wide monitor that gives five short letterboxes,
+           which is the worst shape there is for judging a colour -- a
+           colour's apparent lightness and saturation shift with the size
+           and shape of the patch it is shown in, which is why paint
+           companies hand out large sample cards rather than chips.
+
+           Above 900px the bars run as columns, and the panel becomes a rail
+           down the side that the palette makes room for instead of being
+           covered by. The palette is the thing being worked on; it should
+           not be the thing that gets hidden whenever you reach for a
+           control. Nothing below the breakpoint changes.
+        */
+        @media (min-width: 900px) {
+            body {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                overflow: hidden;
+            }
+
+            .palette {
+                flex-direction: row;
+                flex: 1;
+                min-height: 0;
+                /* Matches the rail's own slide, so the two move together. */
+                transition: margin-right 0.3s ease;
+            }
+
+            /* :has() keeps this in CSS rather than adding a body class the
+               JS has to remember to clear. Where it is unsupported the rail
+               simply overlays, which is the existing behaviour. */
+            body:has(.presets-panel.open) .palette {
+                margin-right: 360px;
+            }
+
+            .color-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: flex-end;
+                padding: 24px 18px;
+                min-width: 0;
+            }
+
+            .hex-code {
+                font-size: 18px;
+                letter-spacing: 0.5px;
+            }
+
+            /* Was absolutely positioned against the right edge, which in a
+               column puts it halfway down the middle of nothing. */
+            .bar-label {
+                position: static;
+                transform: none;
+                order: -1;
+                margin-bottom: 6px;
+            }
+
+            .presets-panel {
+                top: 0;
+                bottom: 0;
+                left: auto;
+                right: 0;
+                width: 360px;
+                max-height: none;
+                border-radius: 0;
+                border-left: 1px solid #222;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            }
+
+            .presets-panel.open {
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 <body>
