@@ -293,6 +293,34 @@
            other two. That is not a glitch to hide; it is the gamut, and it is
            worth being able to see.
         */
+        /* --- The sunflower ------------------------------------------------
+           A showcase rather than an input: the palette as a head of florets,
+           anchors in the middle and each ring outward a subdivision of the one
+           inside it. The florets do not touch. That is not only decoration --
+           setting colours apart with background between them cuts the
+           simultaneous contrast between neighbours, so each one can be judged
+           on its own rather than against whatever it happens to sit beside.
+        */
+        .stage {
+            flex: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+
+        body.showing .stage { display: flex; }
+        body.showing .palette { display: none; }
+
+        .stage.on-white { background: #fff; }
+        .stage.on-black { background: #000; }
+
+        #sunflower {
+            width: min(100%, 78vh);
+            height: auto;
+            display: block;
+        }
+
         .comb {
             display: block;
             width: 100%;
@@ -535,11 +563,16 @@
 </head>
 <body>
     <div class="palette" id="palette"></div>
+
+    <div class="stage on-white" id="stage">
+        <svg id="sunflower" viewBox="-160 -160 320 320" aria-label="Palette as a sunflower"></svg>
+    </div>
     
     <div class="controls">
         <button id="btn-remove">−</button>
         <span class="color-count" id="color-count">5 colors</span>
         <button id="btn-add">+</button>
+        <button type="button" id="btn-show" class="ghost-btn" aria-pressed="false">Show</button>
         <button type="button" id="btn-measure" class="ghost-btn" aria-pressed="false">Measure</button>
         <button type="button" id="btn-ground" class="ghost-btn" hidden>on white</button>
         <button id="btn-presets" class="preset-btn">☰</button>
@@ -1172,6 +1205,8 @@
                 }
             }
 
+            if (document.body.classList.contains('showing')) renderSunflower();
+
             // Update bottom bar
             const allHex = palette.map(p => '#' + p.color.replace('#', '')).join(', ');
             document.getElementById('all-codes').textContent = allHex;
@@ -1657,6 +1692,97 @@
         nativeInput.addEventListener('change', saveState);
         document.getElementById('btn-close-picker').addEventListener('click', closePicker);
 
+        // --- The sunflower ----------------------------------------------------
+        // Rings are recursive midpoints of a CLOSED anchor ring, which is the
+        // traditional colour wheel's structure done perceptually: n anchors
+        // give n, n, 2n, 4n going out, so three anchors reach 24 florets --
+        // the same count as the classic wheel, subdivided in OKLab and from
+        // anchors you chose rather than in RYB from red, yellow and blue.
+        //
+        // Closing the ring invents a bridge the bar view never shows, from the
+        // last anchor back to the first. Two anchors are degenerate here, since
+        // both arcs between them give the same midpoint, so this wants three.
+        const SUN_DEPTH = 4;
+
+        function sunflowerRings(hexes, depth) {
+            const rings = [hexes.slice()];
+            let current = hexes.slice();
+            for (let d = 1; d < depth; d++) {
+                const mids = current.map((h, i) => midpointColor(h, current[(i + 1) % current.length]));
+                rings.push(mids);
+                const woven = [];
+                current.forEach((h, i) => woven.push(h, mids[i]));
+                current = woven;
+            }
+            return rings;
+        }
+
+        // An ice-cream cone: rounded outer edge, a point at the tip, and sides
+        // bowed inward. Straight sides read as a pie chart -- the pinch is what
+        // makes the thing look grown rather than divided up.
+        function petalPath(a0, a1, ri, ro) {
+            const P = (ang, rad) => [(rad * Math.cos(ang)).toFixed(2), (rad * Math.sin(ang)).toFixed(2)];
+            const mid = (a0 + a1) / 2;
+            const [tx, ty] = P(mid, ri);
+            const [o0x, o0y] = P(a0, ro);
+            const [o1x, o1y] = P(a1, ro);
+            // Controls pulled toward the axis, which is what bows the sides in.
+            const cr = ri + (ro - ri) * 0.55;
+            const [c0x, c0y] = P(mid + (a0 - mid) * 0.34, cr);
+            const [c1x, c1y] = P(mid + (a1 - mid) * 0.34, cr);
+            return `M${tx},${ty} Q${c0x},${c0y} ${o0x},${o0y} `
+                 + `A${ro},${ro} 0 0 1 ${o1x},${o1y} Q${c1x},${c1y} ${tx},${ty} Z`;
+        }
+
+        function renderSunflower() {
+            const svg = document.getElementById('sunflower');
+            if (anchors.length < 3) {
+                svg.innerHTML = '<text x="0" y="0" fill="#888" font-size="13" '
+                    + 'text-anchor="middle">A wheel needs three anchors.</text>';
+                return;
+            }
+            const rings = sunflowerRings(anchors, SUN_DEPTH);
+            const r0 = 26, rMax = 150, band = (rMax - r0) / rings.length;
+            let out = '';
+            rings.forEach((ring, k) => {
+                const ri = r0 + k * band + 2;
+                const ro = r0 + (k + 1) * band - 2;
+                const step = (Math.PI * 2) / ring.length;
+                const gap = step * 0.1;
+                // Every ring past the first is offset by half its own step, so a
+                // subdivision sits between the two florets it came from.
+                const offset = k === 0 ? 0 : 0.5;
+                ring.forEach((hex, i) => {
+                    const c = -Math.PI / 2 + (i + offset) * step;
+                    out += `<path d="${petalPath(c - step / 2 + gap / 2, c + step / 2 - gap / 2, ri, ro)}" `
+                         + `fill="${hex}"></path>`;
+                });
+            });
+            svg.innerHTML = out;
+        }
+
+        function paintStage() {
+            const stage = document.getElementById('stage');
+            stage.classList.toggle('on-white', ground === '#FFFFFF');
+            stage.classList.toggle('on-black', ground !== '#FFFFFF');
+        }
+
+        function syncGroundButton() {
+            document.getElementById('btn-ground').hidden =
+                !(measuring || document.body.classList.contains('showing'));
+        }
+
+        function setShowing(on) {
+            document.body.classList.toggle('showing', on);
+            document.getElementById('btn-show').setAttribute('aria-pressed', String(on));
+            syncGroundButton();
+            paintStage();
+            if (on) renderSunflower();
+        }
+
+        document.getElementById('btn-show').addEventListener('click',
+            () => setShowing(!document.body.classList.contains('showing')));
+
         // The ground is a real choice rather than a preference: a colour that
         // carries text on white can be invisible on black, and this app's own
         // chrome is black while most things people build are not.
@@ -1664,7 +1790,7 @@
             measuring = on;
             document.body.classList.toggle('measuring', on);
             document.getElementById('btn-measure').setAttribute('aria-pressed', String(on));
-            document.getElementById('btn-ground').hidden = !on;
+            syncGroundButton();
             render();
         }
 
@@ -1674,6 +1800,7 @@
             ground = ground === '#FFFFFF' ? '#000000' : '#FFFFFF';
             document.getElementById('btn-ground').textContent =
                 ground === '#FFFFFF' ? 'on white' : 'on black';
+            paintStage();
             render();
         });
 
