@@ -280,6 +280,112 @@
             margin-top: 10px;
         }
 
+        /* --- The OKLCH editor ---------------------------------------------
+           Three axes instead of a popup. The native control is a popup that
+           covers the palette while you scrub it, edits in HSV, and cannot be
+           styled -- and it belongs to the input it opened from, which is what
+           made it so easy to destroy by accident.
+
+           The tracks are painted with this app's OWN conversion, so what you
+           see on the track is what you will get in the bar, gamut mapping and
+           all. The chroma track ends at the real sRGB ceiling for the current
+           lightness and hue, which means the boundary moves as you drag the
+           other two. That is not a glitch to hide; it is the gamut, and it is
+           worth being able to see.
+        */
+        .ax {
+            margin-bottom: 22px;
+        }
+
+        .ax-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+            color: #888;
+            font-size: 12px;
+            letter-spacing: 0.4px;
+        }
+
+        .ax-val {
+            color: #ddd;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 44px of grab area around a 12px visual track. The handle is small
+           to look at and large to hit -- misses read as the control's fault. */
+        .ax-track {
+            position: relative;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            touch-action: none;
+            outline: none;
+        }
+
+        .ax-rail {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .ax-handle {
+            position: absolute;
+            top: 50%;
+            width: 22px;
+            height: 22px;
+            margin-left: -11px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid rgba(0,0,0,0.35);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+            transform: translateY(-50%);
+            transition: box-shadow 0.15s ease;
+            pointer-events: none;
+        }
+
+        /* Reacts on touch-DOWN, before any movement. Confirms the grab. */
+        .ax-track.grabbing .ax-handle,
+        .ax-track:focus-visible .ax-handle {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.6), 0 0 0 6px rgba(255,255,255,0.16);
+        }
+
+        .ax-hint {
+            color: #666;
+            font-size: 11px;
+            line-height: 1.5;
+            margin: -8px 0 18px;
+            min-height: 1.5em;
+        }
+
+        .picker-hex {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 15px;
+            letter-spacing: 1px;
+            padding: 12px 14px;
+            text-transform: uppercase;
+        }
+
+        .picker-native {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            background: none;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            color: #888;
+            font-size: 13px;
+            padding: 10px;
+            cursor: pointer;
+        }
+
         /* --- The measured view -------------------------------------------
            Hidden until asked for. The palette is the thing; this annotates
            it rather than replacing it. */
@@ -437,6 +543,42 @@
         <div class="presets-list" id="presets-list"></div>
     </div>
     
+    <!-- Shares .presets-panel's positioning so it is a bottom sheet on a
+         phone and a rail on a wide screen, without a second set of rules. -->
+    <div class="presets-panel picker-panel" id="picker-panel">
+        <div class="presets-header">
+            <span id="picker-title">Anchor</span>
+            <button id="btn-close-picker" aria-label="Close">✕</button>
+        </div>
+
+        <div class="ax" data-axis="L">
+            <div class="ax-head"><span>Lightness</span><span class="ax-val"></span></div>
+            <div class="ax-track" role="slider" tabindex="0" aria-label="Lightness">
+                <div class="ax-rail"></div><div class="ax-handle"></div>
+            </div>
+        </div>
+
+        <div class="ax" data-axis="C">
+            <div class="ax-head"><span>Chroma</span><span class="ax-val"></span></div>
+            <div class="ax-track" role="slider" tabindex="0" aria-label="Chroma">
+                <div class="ax-rail"></div><div class="ax-handle"></div>
+            </div>
+        </div>
+
+        <div class="ax" data-axis="H">
+            <div class="ax-head"><span>Hue</span><span class="ax-val"></span></div>
+            <div class="ax-track" role="slider" tabindex="0" aria-label="Hue">
+                <div class="ax-rail"></div><div class="ax-handle"></div>
+            </div>
+        </div>
+
+        <p class="ax-hint" id="picker-hint"></p>
+
+        <input class="picker-hex" id="picker-hex" spellcheck="false" aria-label="Hex value">
+        <button type="button" class="picker-native" id="btn-native">Use the system picker</button>
+        <input type="color" id="native-input" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px">
+    </div>
+
     <div class="bottom-bar" id="bottom-bar">
         <span class="all-codes" id="all-codes"></span>
     </div>
@@ -921,17 +1063,8 @@
             readout.style.color = ink;
             readout.innerHTML = measuring ? readoutFor(item.color) : '';
 
-            if (item.isAnchor) {
-                // Written only when it genuinely differs. Assigning to an input
-                // whose picker is open moves that picker, and during a drag the
-                // value is already what we would be setting.
-                const input = bar.querySelector('input');
-                if (input.value.toLowerCase() !== item.color.toLowerCase()) {
-                    input.value = item.color;
-                }
-            } else {
-                bar.setAttribute('aria-label', `Copy ${item.color}`);
-            }
+            bar.setAttribute('aria-label',
+                item.isAnchor ? `Edit anchor, ${item.color}` : `Copy ${item.color}`);
         }
 
         function buildBar(item) {
@@ -944,19 +1077,19 @@
                     <span class="bar-readout"></span>
                 </span>
                 <span class="bar-label">${item.isAnchor ? 'Anchor' : 'Auto'}</span>
-                ${item.isAnchor ? `<input type="color" class="color-input" data-anchor-index="${item.anchorIndex}">` : ''}
             `;
 
+            // Anchors used to be a bare bar with an invisible <input> laid over
+            // it, which meant they could not be reached by keyboard at all --
+            // the bridges were fixed for this and the anchors were not.
             if (item.isAnchor) {
-                const input = bar.querySelector('input');
-                input.addEventListener('input', (e) => {
-                    anchors[item.anchorIndex] = e.target.value.toUpperCase();
-                    render();
+                bar.tabIndex = 0;
+                bar.setAttribute('role', 'button');
+                const edit = () => openPicker(item.anchorIndex);
+                bar.addEventListener('click', edit);
+                bar.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); edit(); }
                 });
-                // Persist when the picker settles rather than on every frame of
-                // a drag -- localStorage is synchronous and a scrub fires
-                // `input` dozens of times a second.
-                input.addEventListener('change', saveState);
             } else {
                 // A bridge is a control -- it copies. It was a bare <div>
                 // with a click handler, so it could not be reached by
@@ -1268,6 +1401,8 @@
         
         // Presets panel controls
         function openPresets() {
+            // One rail, one occupant.
+            document.getElementById('picker-panel').classList.remove('open');
             buildPresetsPanel();
             document.getElementById('presets-panel').classList.add('open');
         }
@@ -1276,6 +1411,152 @@
             document.getElementById('presets-panel').classList.remove('open');
         }
         
+        // --- The OKLCH editor -----------------------------------------------
+        // While the panel is open the LCH triple is the source of truth, not
+        // the hex. Round-tripping through 8 bits on every frame makes the
+        // handles jitter and quietly walks a colour away from where you put it.
+        const AXES = {
+            L: { min: 0, max: 1,   step: 0.005, fmt: v => v.toFixed(3) },
+            C: { min: 0, max: 0.4, step: 0.002, fmt: v => v.toFixed(3) },
+            H: { min: 0, max: 360, step: 1,     fmt: v => Math.round(v) + '°' }
+        };
+
+        let editing = null;
+        let edit = { L: 0, C: 0, H: 0 };
+
+        function currentHex() { return oklchToHex(edit); }
+
+        function openPicker(index) {
+            closePresets();
+            editing = index;
+            const c = hexToOklch(anchors[index]);
+            edit = { L: c.L, C: c.C, H: c.H === null ? 0 : c.H };
+            document.getElementById('picker-title').textContent = `Anchor ${index + 1}`;
+            paintPicker();
+            document.getElementById('picker-panel').classList.add('open');
+        }
+
+        function closePicker() {
+            document.getElementById('picker-panel').classList.remove('open');
+            editing = null;
+            saveState();
+        }
+
+        function commitEdit() {
+            if (editing === null) return;
+            anchors[editing] = currentHex();
+            render();
+            paintPicker();
+        }
+
+        // Painted with this app's own conversion, so the track is a promise
+        // about what the bar will show. The chroma track runs past the sRGB
+        // ceiling on purpose: beyond it the colours simply stop getting more
+        // saturated, which makes the gamut edge something you can see rather
+        // than something that silently eats your input.
+        function trackGradient(axis) {
+            const a = AXES[axis];
+            const n = axis === 'H' ? 24 : 16;
+            const stops = [];
+            for (let i = 0; i <= n; i++) {
+                stops.push(oklchToHex({ ...edit, [axis]: a.min + (a.max - a.min) * (i / n) }));
+            }
+            return `linear-gradient(to right, ${stops.join(',')})`;
+        }
+
+        function paintPicker() {
+            const hull = maxChroma(edit.L, edit.H);
+            document.querySelectorAll('.ax').forEach(el => {
+                const axis = el.dataset.axis, a = AXES[axis];
+                const t = (edit[axis] - a.min) / (a.max - a.min);
+                el.querySelector('.ax-val').textContent = a.fmt(edit[axis]);
+                el.querySelector('.ax-rail').style.background = trackGradient(axis);
+                el.querySelector('.ax-handle').style.left = `${t * 100}%`;
+                el.querySelector('.ax-track').setAttribute('aria-valuenow', a.fmt(edit[axis]));
+            });
+            document.getElementById('picker-hex').value = currentHex();
+            document.getElementById('picker-hint').textContent = edit.C > hull + 1e-4
+                ? `Past the sRGB edge — chroma holds at ${hull.toFixed(3)} for this lightness and hue.`
+                : `sRGB allows ${hull.toFixed(3)} chroma here.`;
+        }
+
+        function bindSlider(el) {
+            const axis = el.dataset.axis, a = AXES[axis];
+            const track = el.querySelector('.ax-track');
+            const clamp = v => Math.min(a.max, Math.max(a.min, v));
+            let lastX = 0;
+
+            track.addEventListener('pointerdown', (e) => {
+                track.setPointerCapture(e.pointerId);
+                track.classList.add('grabbing');
+                track.focus();
+                const r = track.getBoundingClientRect();
+                lastX = e.clientX;
+                edit[axis] = clamp(a.min + ((e.clientX - r.left) / r.width) * (a.max - a.min));
+                commitEdit();
+            });
+
+            track.addEventListener('pointermove', (e) => {
+                if (!track.hasPointerCapture(e.pointerId)) return;
+                const r = track.getBoundingClientRect();
+                // Drag away from the track and the scrub slows down, for fine
+                // adjustment. This is the iOS behaviour people feel and cannot
+                // name, and it is the reason a short track can still be precise.
+                const away = Math.max(0, Math.abs(e.clientY - (r.top + r.height / 2)) - r.height / 2);
+                const ratio = Math.max(0.12, 1 / (1 + away / 55));
+                const dx = e.clientX - lastX;
+                lastX = e.clientX;
+                edit[axis] = clamp(edit[axis] + (dx / r.width) * (a.max - a.min) * ratio);
+                commitEdit();
+            });
+
+            const release = (e) => {
+                track.classList.remove('grabbing');
+                if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId);
+                saveState();
+            };
+            track.addEventListener('pointerup', release);
+            track.addEventListener('pointercancel', release);
+
+            track.addEventListener('keydown', (e) => {
+                const step = a.step * (e.shiftKey ? 10 : 1);
+                const d = (e.key === 'ArrowLeft' || e.key === 'ArrowDown') ? -step
+                        : (e.key === 'ArrowRight' || e.key === 'ArrowUp') ? step : 0;
+                if (!d) return;
+                e.preventDefault();
+                edit[axis] = clamp(edit[axis] + d);
+                commitEdit();
+                saveState();
+            });
+        }
+        document.querySelectorAll('.ax').forEach(bindSlider);
+
+        document.getElementById('picker-hex').addEventListener('change', (e) => {
+            const v = '#' + e.target.value.trim().replace(/^#/, '').toUpperCase();
+            if (!hexToRgb(v)) { paintPicker(); return; }
+            const c = hexToOklch(v);
+            // A neutral has no hue to read, so the one on the dial is kept.
+            edit = { L: c.L, C: c.C, H: c.H === null ? edit.H : c.H };
+            commitEdit();
+            saveState();
+        });
+
+        // The native control stays reachable. It is a fine thing to type into,
+        // and on iOS the system picker is genuinely good -- it is only a bad
+        // place to scrub, which is what the sliders are for.
+        const nativeInput = document.getElementById('native-input');
+        document.getElementById('btn-native').addEventListener('click', () => {
+            nativeInput.value = currentHex();
+            nativeInput.click();
+        });
+        nativeInput.addEventListener('input', () => {
+            const c = hexToOklch(nativeInput.value.toUpperCase());
+            edit = { L: c.L, C: c.C, H: c.H === null ? edit.H : c.H };
+            commitEdit();
+        });
+        nativeInput.addEventListener('change', saveState);
+        document.getElementById('btn-close-picker').addEventListener('click', closePicker);
+
         // The ground is a real choice rather than a preference: a colour that
         // carries text on white can be invisible on black, and this app's own
         // chrome is black while most things people build are not.
