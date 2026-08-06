@@ -314,9 +314,27 @@
     <div class="copied-toast" id="toast">Copied!</div>
     
     <script>
-        // Register service worker
-        if ('serviceWorker' in navigator) {
+        // Register service worker -- but NEVER on localhost.
+        //
+        // The worker is cache-first on a fixed name, which is right for an
+        // installed PWA and poisonous while developing: it caches a snapshot on
+        // first load and serves it back on every reload afterwards, so the page
+        // under test is always one edit behind the file on disk. Bumping
+        // CACHE_NAME does not help, because the name does not change between
+        // saves -- it is a release mechanism, not a development one.
+        //
+        // The failure mode is the expensive part: the app runs, nothing errors,
+        // and the change simply is not there. That reads exactly like a broken
+        // change, so the time goes into debugging code that was never executed.
+        const IS_DEV = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+        if ('serviceWorker' in navigator && !IS_DEV) {
             navigator.serviceWorker.register('sw.js');
+        } else if (IS_DEV && 'serviceWorker' in navigator) {
+            // Clean up after any worker registered before this guard existed,
+            // otherwise it keeps serving its cache on this origin forever.
+            navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+            if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
         }
         
         // State: anchors array (2-5 anchors = 3-9 total colors)
@@ -424,8 +442,28 @@
             ];
         }
 
+        // The tolerance is not slop, it is the accuracy of the transform. The
+        // OKLab matrices are fitted approximations, so a colour that sits
+        // exactly ON the sRGB hull round-trips to a channel a few ten-thousandths
+        // the wrong side of zero.
+        //
+        // At 1e-4 that broke an assumption every bisection here depends on --
+        // that the ray out from neutral is in gamut up to one boundary and out
+        // after it. Measured along pure blue's ray (L 0.452, H 264.05): in gamut
+        // at 85% of its chroma, OUT at 90%, 95% and 99% where linear red reads
+        // -0.00063, and in again at 100% where it is exactly 0. A hole in the
+        // middle, and a bisection walks straight into it -- maxChroma returned
+        // 0.2674 for a colour whose chroma is 0.3132, a 15% underestimate, and
+        // oklabToHex used the same pattern to desaturate bridges further than
+        // the gamut actually required.
+        //
+        // 1e-3 clears the transform's own error. In linear light that is well
+        // under a quarter of an 8-bit step, and the clamp at the end of
+        // oklabToHex catches whatever rounds past the edge.
+        const GAMUT_EPS = 1e-3;
+
         function inGamut(lab) {
-            return oklabToLinear(lab).every(c => c >= -1e-4 && c <= 1 + 1e-4);
+            return oklabToLinear(lab).every(c => c >= -GAMUT_EPS && c <= 1 + GAMUT_EPS);
         }
 
         // OKLab is bigger than sRGB, so a midpoint can land somewhere the screen
@@ -539,6 +577,148 @@
             return relativeLuminance(hex) > INK_CROSSOVER ? '#000' : '#fff';
         }
 
+        // --- Measurement ---------------------------------------------------
+        // What a snap point is made of. Every function here returns a NUMBER,
+        // never a verdict. The scrubber's job is to narrow the field and say
+        // why; the eye still picks. That split is the whole design, and it is
+        // also the honest one -- these metrics can tell you a palette is
+        // legible and coherent, they cannot tell you it is beautiful.
+
+        const DEG = 180 / Math.PI;
+
+        function hexToOklch(hex) {
+            const { L, a, b } = hexToOklab(hex);
+            const C = Math.hypot(a, b);
+            // A neutral has no hue -- CSS Color 4 calls it powerless. Reported
+            // as null rather than as atan2(0, 0), which is red and would put a
+            // grey into the harmony maths as though it pointed somewhere.
+            const H = C < 1e-6 ? null : ((Math.atan2(b, a) * DEG) % 360 + 360) % 360;
+            return { L, C, H };
+        }
+
+        function oklchToHex({ L, C, H }) {
+            const h = (H === null ? 0 : H) / DEG;
+            return oklabToHex({ L, a: C * Math.cos(h), b: C * Math.sin(h) });
+        }
+
+        // The most chroma sRGB can actually show at this lightness and hue.
+        // The hull is nothing like a circle -- yellow reaches far further out
+        // than blue -- so "hold chroma constant across these hues" is only a
+        // request that can be granted up to the SMALLEST hull among them.
+        function maxChroma(L, H) {
+            if (H === null) return 0;
+            const h = H / DEG, cos = Math.cos(h), sin = Math.sin(h);
+            let lo = 0, hi = 0.4;
+            for (let i = 0; i < 24; i++) {
+                const mid = (lo + hi) / 2;
+                if (inGamut({ L, a: mid * cos, b: mid * sin })) lo = mid; else hi = mid;
+            }
+            return lo;
+        }
+
+        function contrast(hex1, hex2) {
+            const a = relativeLuminance(hex1), b = relativeLuminance(hex2);
+            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        }
+
+        // --- Harmony --------------------------------------------------------
+        // The named harmonies are angular relationships, so the STRUCTURE ports
+        // to OKLCH cleanly. The familiar NUMBERS do not: the artist's wheel is
+        // RYB, the web's is HSL, and OKLCH hue is neither, so copying 120 across
+        // from a colour-theory chart would be folklore rather than geometry.
+        //
+        // What is derivable: n colours spread evenly around the circle sit
+        // 360/n apart. In OKLCH those steps are also equal TO THE EYE, which is
+        // the entire reason for working in a uniform space -- the same division
+        // in HSL gives a crowded band of blues and a gap through the yellows.
+        // And 180 deg negates both a and b, so the complement here is the
+        // opponent-axis opposite: principled, not traditional.
+        //
+        // Analogous is the one genuinely empirical entry. It is not a division
+        // of anything, it is "near neighbours", and 30 deg is the conventional
+        // reading of near.
+        function canonicalSpacings(n) {
+            const snaps = [
+                { name: 'Monochromatic', spacing: 0 },
+                { name: 'Analogous', spacing: 30 }
+            ];
+            if (n >= 2) snaps.push({ name: n === 2 ? 'Complementary' : `Even ${n}-way`, spacing: 360 / n });
+            if (n > 2) snaps.push({ name: 'Complementary', spacing: 180 });
+            // Two entries can collide -- at n = 12 the even split IS analogous.
+            return snaps.filter((s, i) => snaps.findIndex(o => Math.abs(o.spacing - s.spacing) < 1) === i);
+        }
+
+        // Signed shortest arc, so a palette walking one way round the wheel
+        // reads as consistent rather than as alternating +350/-10.
+        function hueDelta(from, to) {
+            return ((to - from + 180) % 360 + 360) % 360 - 180;
+        }
+
+        function classifyHarmony(hexes) {
+            const hues = hexes.map(h => hexToOklch(h).H);
+            if (hues.some(h => h === null)) {
+                return { name: 'Contains a neutral', spacing: null, even: null, offBy: null };
+            }
+            const steps = [];
+            for (let i = 1; i < hues.length; i++) steps.push(hueDelta(hues[i - 1], hues[i]));
+
+            const mag = steps.map(Math.abs);
+            const spacing = mag.reduce((a, b) => a + b, 0) / mag.length;
+            // Even means the steps agree with each other, which is a separate
+            // question from whether they land on a named angle. A palette can be
+            // perfectly even at 47 deg and belong to no family at all.
+            const even = Math.max(...mag.map(m => Math.abs(m - spacing)));
+
+            let best = null;
+            for (const snap of canonicalSpacings(hexes.length)) {
+                const offBy = Math.abs(spacing - snap.spacing);
+                if (!best || offBy < best.offBy) best = { ...snap, offBy };
+            }
+            return { name: best.name, spacing, even, offBy: best.offBy, target: best.spacing };
+        }
+
+        // --- The whole picture ----------------------------------------------
+        // Harmony is measured on the ANCHORS, because that is what the user
+        // places. Lightness, chroma and contrast are measured on the FULL
+        // palette, because that is what ships -- a bridge that fails on the
+        // ground it lands on is just as broken as an anchor that does.
+        function paletteMetrics(anchorHexes, fullHexes) {
+            const lch = fullHexes.map(hexToOklch);
+
+            const lSteps = [];
+            for (let i = 1; i < lch.length; i++) lSteps.push(Math.abs(lch[i].L - lch[i - 1].L));
+            const lMean = lSteps.reduce((a, b) => a + b, 0) / lSteps.length;
+
+            const chromas = lch.map(c => c.C);
+            const headroom = lch.map(c => {
+                const hull = maxChroma(c.L, c.H);
+                return hull > 0 ? c.C / hull : 1;
+            });
+
+            const onWhite = fullHexes.map(h => contrast(h, '#FFFFFF'));
+            const onBlack = fullHexes.map(h => contrast(h, '#000000'));
+
+            return {
+                harmony: classifyHarmony(anchorHexes),
+                lightness: {
+                    meanStep: lMean,
+                    worstDeviation: Math.max(...lSteps.map(s => Math.abs(s - lMean))),
+                    smallestStep: Math.min(...lSteps),
+                    range: Math.max(...lch.map(c => c.L)) - Math.min(...lch.map(c => c.L))
+                },
+                chroma: {
+                    mean: chromas.reduce((a, b) => a + b, 0) / chromas.length,
+                    spread: Math.max(...chromas) - Math.min(...chromas),
+                    meanHullUse: headroom.reduce((a, b) => a + b, 0) / headroom.length
+                },
+                contrast: {
+                    minOnWhite: Math.min(...onWhite),
+                    minOnBlack: Math.min(...onBlack),
+                    bestGround: Math.min(...onWhite) >= Math.min(...onBlack) ? 'white' : 'black'
+                }
+            };
+        }
+
         // Generate full palette (anchors + bridges)
         function generatePalette() {
             const palette = [];
@@ -552,59 +732,103 @@
             return palette;
         }
         
-        // Render the palette
+        // Paint one existing bar. Everything that depends on the color lives
+        // here so that a bar can be updated without being replaced.
+        function paintBar(bar, item) {
+            const hex = item.color.replace('#', '');
+            bar.style.backgroundColor = item.color;
+            bar.dataset.hex = hex;
+
+            const ink = inkOn(item.color);
+            const hexEl = bar.querySelector('.hex-code');
+            hexEl.textContent = hex;
+            hexEl.style.color = ink;
+            bar.querySelector('.bar-label').style.color = ink;
+
+            if (item.isAnchor) {
+                // Written only when it genuinely differs. Assigning to an input
+                // whose picker is open moves that picker, and during a drag the
+                // value is already what we would be setting.
+                const input = bar.querySelector('input');
+                if (input.value.toLowerCase() !== item.color.toLowerCase()) {
+                    input.value = item.color;
+                }
+            } else {
+                bar.setAttribute('aria-label', `Copy ${item.color}`);
+            }
+        }
+
+        function buildBar(item) {
+            const bar = document.createElement('div');
+            bar.className = `color-bar ${item.isAnchor ? 'anchor' : 'bridge'}`;
+
+            bar.innerHTML = `
+                <span class="hex-code"></span>
+                <span class="bar-label">${item.isAnchor ? 'Anchor' : 'Auto'}</span>
+                ${item.isAnchor ? `<input type="color" class="color-input" data-anchor-index="${item.anchorIndex}">` : ''}
+            `;
+
+            if (item.isAnchor) {
+                const input = bar.querySelector('input');
+                input.addEventListener('input', (e) => {
+                    anchors[item.anchorIndex] = e.target.value.toUpperCase();
+                    render();
+                });
+                // Persist when the picker settles rather than on every frame of
+                // a drag -- localStorage is synchronous and a scrub fires
+                // `input` dozens of times a second.
+                input.addEventListener('change', saveState);
+            } else {
+                // A bridge is a control -- it copies. It was a bare <div>
+                // with a click handler, so it could not be reached by
+                // keyboard or announced as anything, which meant half the
+                // palette was unusable without a pointer.
+                bar.tabIndex = 0;
+                bar.setAttribute('role', 'button');
+                const copy = () => {
+                    const hex = '#' + bar.dataset.hex;
+                    // writeText rejects on an insecure origin and when the
+                    // document is not focused. Unhandled, that is a button
+                    // that silently does nothing.
+                    navigator.clipboard.writeText(hex)
+                        .then(() => showToast(`Copied ${hex}`))
+                        .catch(() => showToast(hex));
+                };
+                bar.addEventListener('click', copy);
+                bar.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy(); }
+                });
+            }
+
+            paintBar(bar, item);
+            return bar;
+        }
+
+        // Render the palette.
+        //
+        // Bars are REUSED whenever the shape of the palette is unchanged, and
+        // that is the fix rather than an optimisation: the native color picker
+        // belongs to the <input type="color"> it was opened from, and dragging
+        // its hue handle fires `input` on every frame. Rebuilding the list on
+        // each of those events destroyed that input, so the picker closed the
+        // instant you started to scrub. Typing into the numeric fields survived
+        // only because they commit once, after you have finished.
+        //
+        // The shape is the anchor/bridge sequence, which changes only when an
+        // anchor is added or removed -- never while a color is being edited.
         function render() {
             const palette = generatePalette();
             const container = document.getElementById('palette');
-            container.innerHTML = '';
-            
-            palette.forEach((item, index) => {
-                const bar = document.createElement('div');
-                bar.className = `color-bar ${item.isAnchor ? 'anchor' : 'bridge'}`;
-                bar.style.backgroundColor = item.color;
-                bar.dataset.hex = item.color.replace('#', '');
-                
-                const textColor = inkOn(item.color);
+            const shape = palette.map(p => p.isAnchor ? 'a' : 'b').join('');
 
-                bar.innerHTML = `
-                    <span class="hex-code" style="color: ${textColor}">${item.color.replace('#', '')}</span>
-                    <span class="bar-label" style="color: ${textColor}">${item.isAnchor ? 'Anchor' : 'Auto'}</span>
-                    ${item.isAnchor ? `<input type="color" class="color-input" value="${item.color}" data-anchor-index="${item.anchorIndex}">` : ''}
-                `;
-                
-                if (item.isAnchor) {
-                    const input = bar.querySelector('input');
-                    input.addEventListener('input', (e) => {
-                        anchors[item.anchorIndex] = e.target.value.toUpperCase();
-                        render();
-                        saveState();
-                    });
-                } else {
-                    // A bridge is a control -- it copies. It was a bare <div>
-                    // with a click handler, so it could not be reached by
-                    // keyboard or announced as anything, which meant half the
-                    // palette was unusable without a pointer.
-                    bar.tabIndex = 0;
-                    bar.setAttribute('role', 'button');
-                    bar.setAttribute('aria-label', `Copy ${item.color}`);
-                    const copy = () => {
-                        const hex = '#' + bar.dataset.hex;
-                        // writeText rejects on an insecure origin and when the
-                        // document is not focused. Unhandled, that is a button
-                        // that silently does nothing.
-                        navigator.clipboard.writeText(hex)
-                            .then(() => showToast(`Copied ${hex}`))
-                            .catch(() => showToast(hex));
-                    };
-                    bar.addEventListener('click', copy);
-                    bar.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copy(); }
-                    });
-                }
-                
-                container.appendChild(bar);
-            });
-            
+            if (container.dataset.shape === shape) {
+                palette.forEach((item, i) => paintBar(container.children[i], item));
+            } else {
+                container.innerHTML = '';
+                palette.forEach(item => container.appendChild(buildBar(item)));
+                container.dataset.shape = shape;
+            }
+
             // Update bottom bar
             const allHex = palette.map(p => '#' + p.color.replace('#', '')).join(', ');
             document.getElementById('all-codes').textContent = allHex;
