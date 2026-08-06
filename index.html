@@ -293,6 +293,24 @@
            other two. That is not a glitch to hide; it is the gamut, and it is
            worth being able to see.
         */
+        .comb {
+            display: block;
+            width: 100%;
+            height: auto;
+            margin-bottom: 18px;
+            overflow: visible;
+        }
+
+        .comb polygon {
+            cursor: pointer;
+            stroke: none;
+        }
+
+        .comb polygon.sel {
+            stroke: #fff;
+            stroke-width: 2.5;
+        }
+
         .ax {
             margin-bottom: 22px;
         }
@@ -550,6 +568,8 @@
             <span id="picker-title">Anchor</span>
             <button id="btn-close-picker" aria-label="Close">✕</button>
         </div>
+
+        <svg class="comb" id="comb" viewBox="-160 -150 320 300" aria-label="Colour comb"></svg>
 
         <div class="ax" data-axis="L">
             <div class="ax-head"><span>Lightness</span><span class="ax-val"></span></div>
@@ -1464,8 +1484,88 @@
             return `linear-gradient(to right, ${stops.join(',')})`;
         }
 
+        // --- The comb --------------------------------------------------------
+        // A honeycomb of discrete cells: hue around, chroma outward, lightness
+        // left to the slider beneath it. The lattice is the one Office's colour
+        // dialog uses. The difference is that this one is laid out in OKLCH, so
+        // a step looks like a step -- the same grid in HSL gives a dense band of
+        // near-identical blues and a hole through the yellows.
+        //
+        // Each ring is a fraction of THAT HUE'S OWN ceiling rather than a fixed
+        // chroma. A fixed chroma would clamp the outer rings wherever sRGB is
+        // narrow and hand back rows of duplicates. The cost is that a ring is
+        // equal relative saturation rather than equal chroma, which is the right
+        // trade for a picker: every cell reachable, every cell different.
+        //
+        // This is a LAYOUT use of the gamut hull, not the bridge policy the
+        // README rejects. There the algorithm would be inventing a colour; here
+        // you are choosing one.
+        const COMB_RINGS = 3, COMB_SIZE = 24;
+        let combL = null;
+
+        function combCells() {
+            const cells = [];
+            const maxDist = COMB_SIZE * Math.sqrt(3) * COMB_RINGS;
+            for (let q = -COMB_RINGS; q <= COMB_RINGS; q++) {
+                for (let r = -COMB_RINGS; r <= COMB_RINGS; r++) {
+                    if (Math.abs(q + r) > COMB_RINGS) continue;
+                    const x = COMB_SIZE * 1.5 * q;
+                    const y = COMB_SIZE * Math.sqrt(3) * (r + q / 2);
+                    const dist = Math.hypot(x, y);
+                    cells.push({
+                        x, y,
+                        H: ((Math.atan2(y, x) * DEG) % 360 + 360) % 360,
+                        frac: Math.min(1, dist / maxDist)
+                    });
+                }
+            }
+            return cells;
+        }
+
+        const COMB_SHAPE = [0, 1, 2, 3, 4, 5]
+            .map(i => [COMB_SIZE * Math.cos(Math.PI / 3 * i), COMB_SIZE * Math.sin(Math.PI / 3 * i)]);
+
+        function buildComb() {
+            const svg = document.getElementById('comb');
+            svg.innerHTML = combCells().map(c => {
+                const C = c.frac * maxChroma(edit.L, c.H);
+                const hex = oklchToHex({ L: edit.L, C, H: c.H });
+                const pts = COMB_SHAPE.map(([px, py]) => `${(c.x + px).toFixed(1)},${(c.y + py).toFixed(1)}`).join(' ');
+                return `<polygon points="${pts}" fill="${hex}" data-c="${C}" data-h="${c.H}"></polygon>`;
+            }).join('');
+            combL = edit.L;
+        }
+
+        // Selection is compared in the a/b plane rather than on C and H
+        // separately: near the neutral axis a large hue difference is a tiny
+        // colour difference, and comparing the angles would jump the ring.
+        function markCombSelection() {
+            const ea = edit.C * Math.cos(edit.H / DEG), eb = edit.C * Math.sin(edit.H / DEG);
+            let best = null;
+            for (const p of document.querySelectorAll('#comb polygon')) {
+                const C = +p.dataset.c, H = +p.dataset.h;
+                const d = Math.hypot(C * Math.cos(H / DEG) - ea, C * Math.sin(H / DEG) - eb);
+                p.classList.remove('sel');
+                if (!best || d < best.d) best = { p, d };
+            }
+            if (best) best.p.classList.add('sel');
+        }
+
+        document.getElementById('comb').addEventListener('click', (e) => {
+            const cell = e.target.closest('polygon');
+            if (!cell) return;
+            edit.C = +cell.dataset.c;
+            edit.H = +cell.dataset.h;
+            commitEdit();
+            saveState();
+        });
+
         function paintPicker() {
             const hull = maxChroma(edit.L, edit.H);
+            // The cells depend only on lightness, so they are rebuilt when it
+            // moves rather than on every frame of any drag.
+            if (combL === null || Math.abs(combL - edit.L) > 0.002) buildComb();
+            markCombSelection();
             document.querySelectorAll('.ax').forEach(el => {
                 const axis = el.dataset.axis, a = AXES[axis];
                 const t = (edit[axis] - a.min) / (a.max - a.min);
