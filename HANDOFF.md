@@ -214,5 +214,16 @@ is scraped from ColourLovers, so credit both and do not lean on it commercially.
   history in it came from an LLM and should be checked claim by claim — the
   "orange" one held up (fruit 13th c., colour sense c. 1502, *geolurēad*
   before) except for "until recently". He saw it in a Worcester museum display.
-- The GitHub repo DESCRIPTION still says "smooth HSL-interpolated bridges".
-  Gary's to change; it is a repo setting.
+- ~~The GitHub repo DESCRIPTION still says "smooth HSL-interpolated bridges".~~
+  **DONE — Gary fixed it.** Verified 2026-08-06 via `gh api repos/grbsoftware/
+  Radiance --jq .description`; it now says "interpolated in OKLab rather than
+  HSL", which matches the code.
+
+  Worth keeping for the reason it lingered: this line sat here as an open item
+  for three sessions and I repeated it to Gary as still-broken without looking,
+  because a handoff note is cheaper to read than a fact is to check. Same shape
+  as the halo/vellum hunt and the Pages-cache misdiagnosis. **A checkable claim
+  in this file is a hypothesis with an expiry date** — check it before
+  repeating it, especially the ones parked as "Gary's to do", since those are
+  exactly the ones that get done outside the transcript and never come back to
+  update the note.
