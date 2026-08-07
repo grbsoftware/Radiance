@@ -1847,6 +1847,65 @@
                  + 'Z';
         }
 
+        // Where each ring sits, and how big its florets are.
+        //
+        // Three things want incompatible radii and you can only have two:
+        //
+        //   equal florets  one bulb size on every ring
+        //   equal gaps     gap = 1 - rb*n/(pi*rc), flat only when rc ~ n
+        //   rings lapping  the radial step must not exceed a drop's LENGTH,
+        //                  and rc ~ n doubles that step every ring
+        //
+        // The old layout took even radial bands and one floret size, which
+        // fixes the first and third and abandons the second: rings 1-3 came
+        // out byte-identical in size while their slot shrank from 94 to 61, so
+        // ring 1 was two-thirds air and ring 3 was packed. Gary spotted it as
+        // "the first 2 rings are correct then 3 and 4 are broken".
+        //
+        // The angles were never the problem -- every floret sits midway
+        // between its two parents to within 0.000 degrees. Measure before
+        // touching `offset` again.
+        //
+        // So: start from rc ~ n**SUN_POW and travel SUN_PULL of the way toward
+        // the even-gap ideal, which buys most of the evening while the rings
+        // still lap. Rings 0 and 1 always hold the SAME count (the sequence is
+        // n, n, 2n, 4n), so even gaps would put them at the same radius -- the
+        // tie is broken by nesting ring 0 inside, and it is the ring that
+        // carries the leftover air. Gary chose the pull and the nudge off a
+        // rendered sweep.
+        const SUN_GAP  = 0.86;   // fraction of its slot a floret may occupy
+        const SUN_FILL = 0.55;   // fraction of the tightest slot the bulb takes
+        const SUN_POW  = 0.4;    // rc ~ n**SUN_POW before the pull
+        const SUN_TIE  = 0.62;   // breaks the ring 0 / ring 1 count tie
+        const SUN_NEST = 0.72;   // ring 0 as a fraction of ring 1's radius
+        const SUN_PULL = 0.35;   // how far the middle rings travel toward even
+        const SUN_R0   = 0.15;   // ring 0's extra nudge inward
+        const SUN_RMAX = 152;    // the outermost tip, which is pinned
+
+        function sunflowerLayout(counts) {
+            const last = counts.length - 1;
+            const base = counts.map(n => Math.pow(n, SUN_POW));
+            base[0] *= SUN_TIE;
+            // Size the floret from the TIGHTEST ring so none can overflow its
+            // own slot -- that is what makes one shared size safe.
+            let tight = Infinity;
+            counts.forEach((n, k) => { tight = Math.min(tight, base[k] / n); });
+            const A = SUN_FILL * TAU * tight / 2;
+            const c = SUN_RMAX / (base[last] + A * (1 / DROP_BULB - 1));
+            const rb = A * c, ln = rb / DROP_BULB;
+            const rc = base.map(b => b * c);
+            // The outer ring is pinned, so its slot is what sets the target
+            // gap every other ring is trying to match.
+            const g = 1 - rb * counts[last] / (Math.PI * rc[last]);
+            const out = rc.slice();
+            for (let k = 1; k < last; k++) {
+                const even = rb * counts[k] / (Math.PI * (1 - g));
+                out[k] = rc[k] + SUN_PULL * (even - rc[k]);
+            }
+            if (last >= 1) out[0] = Math.min(rc[0], out[1] * SUN_NEST) * (1 - SUN_R0);
+            return out.map(r => ({ inner: r - rb, tip: r - rb + ln }));
+        }
+
         function renderSunflower() {
             const svg = document.getElementById('sunflower');
             if (anchors.length < 3) {
@@ -1855,16 +1914,12 @@
                 return;
             }
             const rings = sunflowerRings(anchors, SUN_DEPTH);
-            const r0 = 8, rMax = 152, band = (rMax - r0) / rings.length;
+            const layout = sunflowerLayout(rings.map(r => r.length));
             let out = '';
             rings.forEach((ring, k) => {
-                // Each ring reaches back under the one inside it -- the scale
-                // overlap. Without it the rings sit in separate bands and the
-                // whole thing reads as a dartboard.
-                const innerEdge = r0 + k * band - (k ? band * 0.42 : 0);
-                const tipR = r0 + (k + 1) * band;
+                const innerEdge = layout[k].inner, tipR = layout[k].tip;
                 const step = (Math.PI * 2) / ring.length;
-                const halfSpan = step / 2 * 0.86;      // the rest is the gap
+                const halfSpan = step / 2 * SUN_GAP;   // the rest is the gap
                 // Every ring past the first is offset by half its own step, so
                 // a subdivision sits between the two florets it came from.
                 const offset = k === 0 ? 0 : 0.5;
