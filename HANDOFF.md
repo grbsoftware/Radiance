@@ -102,6 +102,20 @@ that a self-crossing drop fails and a correct one passes, all cheap:
 Screenshots are unavailable here (see below), so these are not a convenience —
 they are the only way to see the shape at all.
 
+## PARKED — the ring arrangement, rings 3 and 4
+
+Gary, 2026-08-06, looking at it on black: "first 2 rings are correct then 3 and
+4 are broken." Explicitly parked to finish the shape first — do not start this
+without picking the drop shape up again afterwards.
+
+Not yet diagnosed. Where to look: `renderSunflower`'s half-step offset is
+`k === 0 ? 0 : 0.5`, which offsets every ring past the first by half of ITS OWN
+step. That is right for ring 1 (same count as ring 0) and wrong from ring 2 on,
+where the count doubles — a subdivision should sit between the two florets it
+came from, and half of the new smaller step is not that distance. Rings 1 and 2
+have 3 florets each and rings 3 and 4 have 6 and 12, which matches the report
+exactly. Check that before anything else.
+
 ## Verification gotchas in this setup
 
 - **Screenshots do not work** — the browser pane is not compositing. Pull the

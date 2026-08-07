@@ -1717,29 +1717,77 @@
             return rings;
         }
 
-        // A drop: two circles on one axis -- a big bulb inward, a small nib at
-        // the tip -- joined by their external tangents. The bulb sits INWARD
-        // and the nib runs outward, so each ring's tips pass between the bulbs
-        // of the ring outside it. That overlap is what makes it read as scales
+        // A drop: three circles on one axis. A big bulb INWARD, a rounded tail
+        // outward, and a flank arc tangent to both. The bulb sits inward and
+        // the tail runs outward, so each ring's tails pass between the bulbs of
+        // the ring outside it. That overlap is what makes it read as scales
         // rather than as concentric bands, and the angular gap is what keeps
         // the scales from fusing into a disc.
         //
-        // The proportions are MEASURED off Gary's reference droplet, not
+        // The bulb was MEASURED off Gary's reference droplet rather than
         // chosen: on a 1024px image the drop ran y 100 -> 930 (length 830) and
-        // was 520 wide at its widest, so the bulb is 0.313 of the length and
-        // its centre sits 570 from the tip -- flanks at asin(260/570) = 27.1
-        // degrees. That predicts a width of 102 a hundred pixels below the tip
-        // and the image reads ~100, which is what confirms the flanks really
-        // are STRAIGHT tangents rather than a bowed curve. The tip rounds at
-        // radius ~22, i.e. 0.085 of the bulb.
+        // was 520 wide at its widest, so the bulb is 0.313 of the length.
         //
-        // The nib is the whole difference from the previous version, which
-        // ended in a sharp corner and read as a leaf or a claw. It is also why
-        // an earlier attempt bowed both sides toward the axis chasing
-        // "concave": bowed far enough the sides meet and the shape closes into
-        // a crescent. Two circles and their tangents cannot do that.
+        // The flanks then went two rounds. The reference's are straight -- its
+        // 27.1 degree taper predicts a width of 102 a hundred pixels below the
+        // tip and the image reads ~100 -- but Gary asked for them concave, with
+        // a fatter rounded tail to match. The construction here does both, and
+        // straight is not a separate case: it is DROP_BOW = null, the limit of
+        // the same fillet as its radius goes to infinity.
+        //
+        // Why concave is safe now and was not before. An early attempt bowed
+        // the sides toward the axis while the tip was a POINT; bowed far enough
+        // the two sides meet there and the shape closes into a crescent, which
+        // was the "claw" look. A tail of finite radius makes that impossible --
+        // the flanks land on a circle, so they cannot converge.
         const DROP_BULB = 0.313;   // bulb radius as a fraction of drop length
-        const DROP_NIB  = 0.085;   // nib radius as a fraction of the bulb
+        const DROP_NIB  = 0.30;    // tail radius as a fraction of the bulb
+        const DROP_BOW  = 1.1;     // flank radius in drop lengths; null = straight
+        const TAU = Math.PI * 2;
+
+        // Centre of the flank circle, upper side. The flank touches bulb and
+        // tail EXTERNALLY -- external tangency is what reverses the curvature,
+        // so the flank bows toward the axis and still meets both smoothly.
+        // Solving |F-Cb| = R+rb and |F-Cn| = R+rn for F: subtracting the two
+        // eliminates the squares and leaves fu linear.
+        function filletCentre(rc, cn, rb, rn, R) {
+            const fu = ((rb - rn) * (2 * R + rb + rn) / (cn - rc) + rc + cn) / 2;
+            const disc = (R + rb) * (R + rb) - (fu - rc) * (fu - rc);
+            return disc > 0 ? [fu, Math.sqrt(disc)] : null;
+        }
+
+        // Below some R the flank cannot reach both circles at all and there is
+        // no tidy closed form for where that is, so bisect. Asking for a bow
+        // tighter than this must degrade to the tightest legal curve rather
+        // than emit an arc SVG will quietly reinterpret.
+        function minBowRadius(rc, cn, rb, rn) {
+            let lo = 1e-6, hi = 1;
+            while (!filletCentre(rc, cn, rb, rn, hi)) {
+                hi *= 2;
+                if (hi > 1e7) return null;
+            }
+            for (let i = 0; i < 60; i++) {
+                const mid = (lo + hi) / 2;
+                if (filletCentre(rc, cn, rb, rn, mid)) hi = mid; else lo = mid;
+            }
+            return hi;
+        }
+
+        // An SVG arc takes no centre -- two endpoints and a radius admit two,
+        // either side of the chord, and the flags pick. So a sweep flag is a
+        // property of the shape PLUS the direction you walk it, which is how
+        // the bulb ended up bulging through its own flanks once. Derive both
+        // flags from a point the arc must pass through and the question stops
+        // being answerable by hand at all.
+        function arcFlags(cx, cy, p0, p1, through) {
+            const norm = t => ((t % TAU) + TAU) % TAU;
+            const a0 = Math.atan2(p0[1] - cy, p0[0] - cx);
+            const d1 = norm(Math.atan2(p1[1] - cy, p1[0] - cx) - a0);
+            const dt = norm(Math.atan2(through[1] - cy, through[0] - cx) - a0);
+            const sweep = dt <= d1 ? 1 : 0;
+            const delta = sweep ? d1 : TAU - d1;
+            return [delta > Math.PI ? 1 : 0, sweep];
+        }
 
         function dropPath(a, innerEdge, tipR, halfSpan) {
             // The bulb has to be sized against the slot at ITS OWN centre, not
@@ -1752,35 +1800,51 @@
                                 (tipR - innerEdge) * DROP_BULB);
             const rn = rb * DROP_NIB;
             const rc = innerEdge + rb;       // centre of the bulb
-            const cn = tipR - rn;            // centre of the nib
-            const D  = cn - rc;
-            // For two circles on one axis the external tangent touches each at
-            // the same angle from the centre line, with cos g = (rb - rn) / D.
-            // At rn = 0 this reduces to the old tangent-from-a-point case.
-            const cg = Math.min(0.999, (rb - rn) / Math.max(1e-6, D));
-            const sg = Math.sqrt(Math.max(0, 1 - cg * cg));
+            const cn = tipR - rn;            // centre of the tail
+            const at = (p) => `${(p[0] * Math.cos(a) - p[1] * Math.sin(a)).toFixed(2)},`
+                            + `${(p[0] * Math.sin(a) + p[1] * Math.cos(a)).toFixed(2)}`;
+            const arcTo = (c, p0, p1, r, through) => {
+                const [la, sw] = arcFlags(c[0], c[1], p0, p1, through);
+                return `A${r.toFixed(2)},${r.toFixed(2)} 0 ${la} ${sw} ${at(p1)} `;
+            };
 
-            const at = (u, v) => `${(u * Math.cos(a) - v * Math.sin(a)).toFixed(2)},`
-                               + `${(u * Math.sin(a) + v * Math.cos(a)).toFixed(2)}`;
-            const pau = rc + rb * cg, pav = rb * sg;   // tangent point on bulb
-            const pbu = cn + rn * cg, pbv = rn * sg;   // tangent point on nib
-            // The two arcs take OPPOSITE large-arc flags, and that is forced by
-            // the geometry rather than chosen: because rn < rb the tangents
-            // converge toward the nib, so they wrap less than half of it and
-            // more than half of the bulb. Nib minor, bulb major.
-            //
-            // Both sweeps are 0. SVG does not take a centre -- it DERIVES one
-            // from the flags, and there are two candidates either side of the
-            // chord. This path runs lower -> upper round the bulb where the
-            // previous sharp-tipped version ran upper -> lower, and reversing
-            // the direction flips the sweep. Carrying the old 1 over selected
-            // the far centre, which bulged the bulb toward the tip and crossed
-            // the flanks. The shape self-intersected and still looked almost
-            // plausible at floret size.
-            return `M${at(pau, pav)} L${at(pbu, pbv)} `
-                 + `A${rn.toFixed(2)},${rn.toFixed(2)} 0 0 0 ${at(pbu, -pbv)} `
-                 + `L${at(pau, -pav)} `
-                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 0 ${at(pau, pav)} Z`;
+            let tb, tn, R = 0, F = null, thru = null;
+            if (DROP_BOW !== null) {
+                const rmin = minBowRadius(rc, cn, rb, rn);
+                R = Math.max(DROP_BOW * (tipR - innerEdge), rmin === null ? 0 : rmin * 1.02);
+                F = filletCentre(rc, cn, rb, rn, R);
+            }
+            if (F) {
+                // Touch points lie on the centre lines, between the centres --
+                // that is what external tangency means.
+                const unit = (u) => {
+                    const dx = F[0] - u, dy = F[1], h = Math.hypot(dx, dy);
+                    return [dx / h, dy / h];
+                };
+                const ub = unit(rc), un = unit(cn);
+                tb = [rc + rb * ub[0], rb * ub[1]];
+                tn = [cn + rn * un[0], rn * un[1]];
+                // The flank bulges AWAY from F, so the chord midpoint pushed
+                // back out to the circle is a point it must pass through.
+                const mid = [(tb[0] + tn[0]) / 2, (tb[1] + tn[1]) / 2];
+                const h = Math.hypot(mid[0] - F[0], mid[1] - F[1]);
+                thru = [F[0] + R * (mid[0] - F[0]) / h, F[1] + R * (mid[1] - F[1]) / h];
+            } else {
+                // Straight flank: the same touch points with cos g = (rb-rn)/D.
+                const cg = Math.min(0.999, (rb - rn) / Math.max(1e-6, cn - rc));
+                const sg = Math.sqrt(Math.max(0, 1 - cg * cg));
+                tb = [rc + rb * cg, rb * sg];
+                tn = [cn + rn * cg, rn * sg];
+            }
+            const tbl = [tb[0], -tb[1]], tnl = [tn[0], -tn[1]];
+
+            return `M${at(tb)} `
+                 + (F ? arcTo(F, tb, tn, R, thru) : `L${at(tn)} `)
+                 + arcTo([cn, 0], tn, tnl, rn, [tipR, 0])
+                 + (F ? arcTo([F[0], -F[1]], tnl, tbl, R, [thru[0], -thru[1]])
+                      : `L${at(tbl)} `)
+                 + arcTo([rc, 0], tbl, tb, rb, [innerEdge, 0])
+                 + 'Z';
         }
 
         function renderSunflower() {
