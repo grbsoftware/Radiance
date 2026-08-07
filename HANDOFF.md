@@ -189,6 +189,22 @@ is scraped from ColourLovers, so credit both and do not lean on it commercially.
 - **`Show` as a real third section** with a gallery of forms, plus a first-run
   explainer for why Make and Measure both exist. Land straight in the palette
   on return visits.
+
+  **CONFIRMED by Gary 2026-08-06:** "we will still use the columns for one page
+  and this for another." So the columns and the sunflower are two PAGES, and
+  Measure stays a lens over the columns rather than becoming a third page —
+  which matches the decision already recorded below, that the measured view is
+  a lens and not a second builder.
+
+  The shape that follows: **Make | Show** as navigation, mutually exclusive,
+  with Measure a lens offered only on Make.
+
+  There is a live inconsistency to fix while doing it, verified by walking the
+  toggles: `showing` and `measuring` are independent, so turning Measure on and
+  then Show leaves Measure lit with `body.measuring` set while `.palette` --
+  its only subject -- is `display:none`. It round-trips cleanly on the way back
+  out, so it is a false state rather than a broken one, and it disappears for
+  free once the two are pages.
 - **Re-derive discriminability thresholds in OKLab** so closest-pair can
   become a real threshold. The published numbers are CIELAB and must not be
   quoted across.
