@@ -108,13 +108,41 @@ Gary, 2026-08-06, looking at it on black: "first 2 rings are correct then 3 and
 4 are broken." Explicitly parked to finish the shape first — do not start this
 without picking the drop shape up again afterwards.
 
-Not yet diagnosed. Where to look: `renderSunflower`'s half-step offset is
-`k === 0 ? 0 : 0.5`, which offsets every ring past the first by half of ITS OWN
-step. That is right for ring 1 (same count as ring 0) and wrong from ring 2 on,
-where the count doubles — a subdivision should sit between the two florets it
-came from, and half of the new smaller step is not that distance. Rings 1 and 2
-have 3 florets each and rings 3 and 4 have 6 and 12, which matches the report
-exactly. Check that before anything else.
+**The angles are exact — measured, not assumed.** Every subdivided floret sits
+midway between its two parents to within 0.000 degrees, all 18 of them. An
+earlier version of this note blamed the half-step offset (`k === 0 ? 0 : 0.5`)
+and was WRONG; half of each ring's own step is precisely the parent midpoint
+every time. Do not go there again.
+
+It is a SIZE problem:
+
+    ring  florets  length     rb    slot   width    gap
+      0        3    36.00  11.27    40.4    22.5   17.8
+      1        3    51.12  16.00    94.0    32.0   62.0
+      2        6    51.12  16.00    84.7    32.0   52.7
+      3       12    51.12  16.00    61.2    32.0   29.2
+
+Rings 1-3 are identical in size while their angular slot shrinks from 94 to 61,
+so ring 1 is two-thirds air and ring 3 is packed. Ring 0 is separately the odd
+one out at length 36, because `innerEdge` subtracts the 0.42 overlap for
+`k >= 1` only — which lengthens every ring EXCEPT the first.
+
+Gary guessed ring 0's smaller bulbs were throwing off the outer rings. Ring 0
+really is anomalous, but it cannot propagate: every ring's geometry comes from
+`k`, `band` and `r0` alone.
+
+The root cause is structural. **The floret count doubles each ring (3, 3, 6,
+12) while the radius grows linearly**, so circumference cannot keep pace and
+crowding outward is guaranteed at constant drop size. Two ways out, and it is
+Gary's call which:
+
+- **Drops fill their own slot.** The angular cap already in `dropPath` does
+  exactly this and currently never binds — the length cap wins on all four
+  rings. Small change, keeps gaps even, but makes drop size vary per ring and
+  ring 1 the fattest, which is backwards for a flower.
+- **Radii grow with the count**, geometric rather than linear bands. Keeps drop
+  size even and is the more sunflower-like answer, but rings 0 and 1 share a
+  count so they would need to share a radius — that needs thought.
 
 ## Verification gotchas in this setup
 
