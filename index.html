@@ -663,6 +663,20 @@
         }
         
         // State: anchors array (2-5 anchors = 3-9 total colors)
+        // Raised from 5 to 7 (Gary, 2026-08-06: "3 5 7"). Declared here beside
+        // the state it bounds, because it is read by the button sync and by
+        // loadState long before addColors is ever called.
+        //
+        // Measured before raising it: the angular design is anchor-count
+        // INVARIANT -- gaps come out 51/70/59/45 at 3, 5, 7 and 9 alike. What
+        // changes is the radial lap. The floret shrinks as 1/n (bulb 16.63 at
+        // 3 anchors, 11.04 at 5, 8.26 at 7) while the ring radii stay pinned
+        // to 152, so the rings stop overlapping from 5 up: laps run
+        // +32/+29/+15 at 3 anchors and +2.5/-1.3/-18.1 at 7. Past 5 the
+        // sunflower is concentric BANDS rather than lapping scales -- a real
+        // change in what the picture is, kept deliberately. See HANDOFF.
+        const MAX_ANCHORS = 7;
+
         let anchors = generateEvenHues(3);
         
         // Generate evenly spaced hues around 360°
@@ -1215,9 +1229,9 @@
             const totalColors = palette.length;
             document.getElementById('color-count').textContent = `${totalColors} colors`;
             
-            // Update button states (2 anchors = 3 total, 5 anchors = 9 total)
+            // Update button states (2 anchors = 3 total, 7 anchors = 13 total)
             document.getElementById('btn-remove').disabled = anchors.length <= 2;
-            document.getElementById('btn-add').disabled = anchors.length >= 5;
+            document.getElementById('btn-add').disabled = anchors.length >= MAX_ANCHORS;
         }
         
         // Show toast
@@ -1243,7 +1257,7 @@
                 const saved = JSON.parse(localStorage.getItem('radiance-anchors'));
                 if (Array.isArray(saved)) {
                     const clean = saved.filter(c => typeof c === 'string' && hexToRgb(c));
-                    if (clean.length >= 2) anchors = clean.slice(0, 5).map(c => c.toUpperCase());
+                    if (clean.length >= 2) anchors = clean.slice(0, MAX_ANCHORS).map(c => c.toUpperCase());
                 }
             } catch (e) { /* keep the generated default */ }
 
@@ -1307,7 +1321,7 @@
         }
 
         function addColors() {
-            if (anchors.length >= 5) return;
+            if (anchors.length >= MAX_ANCHORS) return;
             let at = 0, widest = -1;
             for (let i = 0; i < anchors.length - 1; i++) {
                 const d = oklabDistance(anchors[i], anchors[i + 1]);

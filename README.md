@@ -4,7 +4,7 @@ Parametric color palette generator. Define anchor colors, bridges auto-calculate
 
 ## How it works
 
-- **Anchor colors** (tap to edit): 2 to 5 of them
+- **Anchor colors** (tap to edit): 2 to 7 of them
 - **Bridge colors** (auto-computed): the midpoint between each pair of anchors
 - `+` and `-` add or remove an anchor, keeping the ones you already picked
 - **Bridges: Blend or Wheel** (in ☰) — two ways to be halfway
