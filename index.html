@@ -90,16 +90,34 @@
             opacity: 1;
         }
         
+        /* Flexbox spreads a shortfall across EVERY sibling, and a control
+           with a fixed width still shrinks: at 375px the 44px circles were
+           rendering 14px wide and the page nav collapsed to 2px and slid off
+           the left edge. Nothing here may shrink -- the bar takes a second
+           row instead, which costs 48px of a phone screen once and never
+           deforms a control. `justify-content` still centres a single row. */
         .controls {
             background: #000;
             padding: 16px 24px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 14px 20px;
             border-top: 1px solid #222;
         }
-        
+
+        .controls > * { flex: none; }
+
+        /* The three palette-size controls read as one widget and must wrap as
+           one -- a row break between the count and the + turns a stepper into
+           two unrelated buttons. */
+        .count-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
         .controls button {
             background: #222;
             color: #fff;
@@ -482,6 +500,45 @@
             display: none;
         }
 
+        /* Make and Show are PAGES, not toggles: exactly one is on, always.
+           A segmented control is the only widget that says that on sight --
+           two independent pressable pills would imply both-on and neither-on
+           are reachable states, and they are not. Reuses .seg's grammar and
+           only shrinks it, so the two segs in the app stay recognisably the
+           same control. */
+        .controls .seg.pages {
+            gap: 0;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+
+        .controls .seg.pages button {
+            width: auto;
+            height: 36px;
+            padding: 0 16px;
+            border: none;
+            border-radius: 0;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        /* --- Narrow viewports ---------------------------------------------
+           The bar wraps rather than crushing, so this query is not load
+           bearing -- it buys back enough width that the RESTING state (nav,
+           stepper, presets) still fits on one row of a 375px phone. Turning
+           Measure on takes a second row, which is a fair price for a lens
+           you asked for. */
+        @media (max-width: 480px) {
+            .controls { padding: 14px 12px; gap: 12px 10px; }
+            .controls button { width: 40px; height: 40px; font-size: 22px; }
+            .controls .ghost-btn { width: auto; height: 34px; padding: 0 12px; }
+            .controls .seg.pages button { width: auto; height: 34px; padding: 0 10px; }
+            .count-group { gap: 10px; }
+            .color-count { min-width: 64px; font-size: 13px; }
+        }
+
         /* --- Wide viewports ---------------------------------------------
            All of the above is a phone layout, applied unconditionally: a
            column of bars, controls beneath, and panels that slide up OVER
@@ -513,10 +570,15 @@
                 transition: margin-right 0.3s ease;
             }
 
+            /* Show is a page, so it makes room for the rail exactly as the
+               columns do -- otherwise the sunflower sits under it. */
+            .stage { transition: margin-right 0.3s ease; }
+
             /* :has() keeps this in CSS rather than adding a body class the
                JS has to remember to clear. Where it is unsupported the rail
                simply overlays, which is the existing behaviour. */
-            body:has(.presets-panel.open) .palette {
+            body:has(.presets-panel.open) .palette,
+            body:has(.presets-panel.open) .stage {
                 margin-right: 360px;
             }
 
@@ -569,10 +631,15 @@
     </div>
     
     <div class="controls">
-        <button id="btn-remove">−</button>
-        <span class="color-count" id="color-count">5 colors</span>
-        <button id="btn-add">+</button>
-        <button type="button" id="btn-show" class="ghost-btn" aria-pressed="false">Show</button>
+        <div class="seg pages" id="page-seg" role="group" aria-label="View">
+            <button type="button" data-page="make" aria-pressed="true">Make</button>
+            <button type="button" data-page="show" aria-pressed="false">Show</button>
+        </div>
+        <div class="count-group">
+            <button id="btn-remove">−</button>
+            <span class="color-count" id="color-count">5 colors</span>
+            <button id="btn-add">+</button>
+        </div>
         <button type="button" id="btn-measure" class="ghost-btn" aria-pressed="false">Measure</button>
         <button type="button" id="btn-ground" class="ghost-btn" hidden>on white</button>
         <button id="btn-presets" class="preset-btn">☰</button>
@@ -1091,6 +1158,9 @@
         //                   makes up to nine.
         let measuring = false;
         let ground = '#FFFFFF';
+        // Deliberately NOT persisted: a return visit lands in the palette,
+        // which is the thing the app is for. Show is somewhere you go.
+        let page = 'make';
 
         function readoutFor(hex) {
             const ratio = contrast(hex, ground);
@@ -1219,7 +1289,7 @@
                 }
             }
 
-            if (document.body.classList.contains('showing')) renderSunflower();
+            if (page === 'show') renderSunflower();
 
             // Update bottom bar
             const allHex = palette.map(p => '#' + p.color.replace('#', '')).join(', ');
@@ -1954,20 +2024,37 @@
         }
 
         function syncGroundButton() {
+            // The ground is a property of whatever is being LOOKED at: the
+            // stage always has one, and the columns only acquire one when the
+            // measured view starts reporting against it.
             document.getElementById('btn-ground').hidden =
-                !(measuring || document.body.classList.contains('showing'));
+                !(page === 'show' || measuring);
         }
 
-        function setShowing(on) {
-            document.body.classList.toggle('showing', on);
-            document.getElementById('btn-show').setAttribute('aria-pressed', String(on));
+        // Make and Show are pages, so Measure -- a lens over the columns --
+        // is only offered on Make. That is what closes the false state the
+        // two independent toggles allowed: Measure lit, body.measuring set,
+        // and .palette (its only subject) display:none behind the stage.
+        // `measuring` is remembered rather than cleared, so the lens is still
+        // on when you come back to it.
+        function setPage(name) {
+            page = name === 'show' ? 'show' : 'make';
+            document.body.classList.toggle('showing', page === 'show');
+            document.querySelectorAll('#page-seg button').forEach(b =>
+                b.setAttribute('aria-pressed', String(b.dataset.page === page)));
+            const m = document.getElementById('btn-measure');
+            m.hidden = page !== 'make';
+            m.setAttribute('aria-pressed', String(measuring));
+            document.body.classList.toggle('measuring', page === 'make' && measuring);
             syncGroundButton();
             paintStage();
-            if (on) renderSunflower();
+            if (page === 'show') renderSunflower(); else render();
         }
 
-        document.getElementById('btn-show').addEventListener('click',
-            () => setShowing(!document.body.classList.contains('showing')));
+        document.getElementById('page-seg').addEventListener('click', e => {
+            const b = e.target.closest('button[data-page]');
+            if (b) setPage(b.dataset.page);
+        });
 
         // The ground is a real choice rather than a preference: a colour that
         // carries text on white can be invisible on black, and this app's own

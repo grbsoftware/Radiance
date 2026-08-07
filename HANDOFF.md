@@ -1,15 +1,24 @@
-# Handoff — 2026-08-06
+# Handoff — 2026-08-07
 
 Read `RESEARCH.md` first for the measurements and the papers. This file is
 state: what exists, what is undecided, and what has already been ruled out.
 
 ## Where the code is
 
-Branch **`picker-and-gamut-fixes`**. `main` is UNTOUCHED and nothing is pushed.
-GitHub Pages deploys from `main`, so merging is the act of shipping. `sw.js` is
-already bumped to `radiance-v5`, so installed copies will take the update.
+**`main`, merged and pushed.** GitHub Pages deploys from `main`, so everything
+below is live. `sw.js` is at `radiance-v6` — **bump it on every release** or an
+installed copy serves its cached `index.html` forever.
 
-Built today, all verified in-browser:
+Two notes on this file itself, both worth more than the facts they correct:
+
+- It sat for a whole session claiming the work was unpushed on a branch. The
+  merge commit is `6259544`.
+- `0755a55`'s message says the banded-vs-scales change was "written up in
+  HANDOFF". It was not — the commit touched `README.md` and `index.html` only.
+  **A commit message asserting a note exists is not the note.** Both facts are
+  written down properly now, below.
+
+Built 2026-08-06, all verified in-browser:
 
 1. **Picker no longer closes mid-drag.** `render()` reuses bars when the
    anchor/bridge shape is unchanged. This was the original bug.
@@ -102,47 +111,82 @@ that a self-crossing drop fails and a correct one passes, all cheap:
 Screenshots are unavailable here (see below), so these are not a convenience —
 they are the only way to see the shape at all.
 
-## PARKED — the ring arrangement, rings 3 and 4
+## RESOLVED — the ring arrangement (`ce96671`)
 
 Gary, 2026-08-06, looking at it on black: "first 2 rings are correct then 3 and
-4 are broken." Explicitly parked to finish the shape first — do not start this
-without picking the drop shape up again afterwards.
+4 are broken." Fixed.
 
-**The angles are exact — measured, not assumed.** Every subdivided floret sits
-midway between its two parents to within 0.000 degrees, all 18 of them. An
-earlier version of this note blamed the half-step offset (`k === 0 ? 0 : 0.5`)
-and was WRONG; half of each ring's own step is precisely the parent midpoint
-every time. Do not go there again.
+**The angles were never wrong — measured, not assumed.** Every subdivided
+floret sits midway between its two parents to within 0.000 degrees, all 18 of
+them. An earlier version of this note blamed the half-step offset
+(`k === 0 ? 0 : 0.5`) and was WRONG. Do not go there again.
 
-It is a SIZE problem:
+It was a SIZE fault. Even radial bands gave rings 1-3 byte-identical florets
+while their angular slot shrank from 94 to 61 degrees, so ring 1 was
+two-thirds air and ring 3 was packed.
 
-    ring  florets  length     rb    slot   width    gap
-      0        3    36.00  11.27    40.4    22.5   17.8
-      1        3    51.12  16.00    94.0    32.0   62.0
-      2        6    51.12  16.00    84.7    32.0   52.7
-      3       12    51.12  16.00    61.2    32.0   29.2
+Three things want incompatible radii and only two are available at once: equal
+florets, equal gaps (needs `rc ~ n`), and rings that lap over each other (needs
+the radial step under a drop's length, which `rc ~ n` doubles every ring).
+`sunflowerLayout` starts at `rc ~ n**0.4` and travels 35% toward the even-gap
+ideal. Rings 0 and 1 always carry the same count (the sequence is n, n, 2n,
+4n), so even gaps would put them at one radius; ring 0 nests inside with a
+further 15% nudge. **The floret is sized from the TIGHTEST ring**, which is
+what makes one shared size safe. Measured: bulb 16.63 on every ring, gaps
+51/70/59/45, laps 32.5/29.3/14.7.
 
-Rings 1-3 are identical in size while their angular slot shrinks from 94 to 61,
-so ring 1 is two-thirds air and ring 3 is packed. Ring 0 is separately the odd
-one out at length 36, because `innerEdge` subtracts the 0.42 overlap for
-`k >= 1` only — which lengthens every ring EXCEPT the first.
+### The anchor cap is 7, and the picture CHANGES above 5 (`0755a55`)
 
-Gary guessed ring 0's smaller bulbs were throwing off the outer rings. Ring 0
-really is anomalous, but it cannot propagate: every ring's geometry comes from
-`k`, `band` and `r0` alone.
+Gary: "3 5 7". `MAX_ANCHORS` replaced the 5 that was hardcoded in three places.
+The angular design is anchor-count invariant — gaps are 51/70/59/45 at every
+count — but the floret shrinks as 1/n (bulb 16.63 at 3, 11.04 at 5, 8.26 at 7)
+while ring radii stay pinned to 152. So laps run +32/+29/+15 at 3 anchors and
++2.5/-1.3/-18.1 at 7: **past 5 anchors the sunflower is concentric BANDS, not
+lapping scales.** Kept on purpose — Gary's own screenshots at 4 and 5 are the
+banded look and he likes it. The alternative, tying ring radii to floret size,
+would shrink the whole flower in its frame as the count rises.
 
-The root cause is structural. **The floret count doubles each ring (3, 3, 6,
-12) while the radius grows linearly**, so circumference cannot keep pace and
-crowding outward is guaranteed at constant drop size. Two ways out, and it is
-Gary's call which:
+**So the "scales" language in `dropPath` is only true at 3 and 4 anchors.**
 
-- **Drops fill their own slot.** The angular cap already in `dropPath` does
-  exactly this and currently never binds — the length cap wins on all four
-  rings. Small change, keeps gaps even, but makes drop size vary per ring and
-  ring 1 the fattest, which is backwards for a flower.
-- **Radii grow with the count**, geometric rather than linear bands. Keeps drop
-  size even and is the more sunflower-like answer, but rings 0 and 1 share a
-  count so they would need to share a radius — that needs thought.
+## DONE 2026-08-07 — Make and Show are PAGES, and the bar stopped crushing
+
+**CONFIRMED by Gary 2026-08-06:** "we will still use the columns for one page
+and this for another." Built. `Make | Show` is a segmented control, exactly one
+lit, and **Measure is a lens offered only on Make** — which is what closed the
+false state the two independent toggles allowed (Measure lit and
+`body.measuring` set while `.palette`, its only subject, was `display:none`).
+
+`measuring` is REMEMBERED across a trip to Show rather than cleared, so the
+lens is still on when you come back. `page` is deliberately NOT persisted: a
+return visit lands in the palette, which is the thing the app is for. Show is
+somewhere you go.
+
+Walked all ten transitions in the browser: `showing` and `measuring` never
+co-occur, the ground button appears exactly when something has a ground
+(Show always, Make only while measuring), and ± re-renders the sunflower live
+(3 anchors -> 24 florets, 4 -> 32).
+
+### The bar was crushing its own controls, and had been all along
+
+**Flexbox spreads a shortfall across EVERY sibling, and `width:44px` does not
+stop it** — the default `flex-shrink:1` still applies. At 375px the 44px
+circles were rendering **14px** wide, and once the page nav was added it
+collapsed to 2px and slid to x = -8, off the left edge, with the document
+overflowing horizontally. This predates the nav: five controls already did not
+fit a phone, and the symptom is deformation rather than overflow, so nothing
+ever looked broken enough to chase.
+
+Fix is `flex: none` on every child plus `flex-wrap`, so the bar takes a second
+row instead of deforming. The three palette-size controls are wrapped in
+`.count-group` because a row break between the count and the `+` turns a
+stepper into two unrelated buttons. A `max-width:480px` query buys back enough
+width that the resting state (nav, stepper, presets) still fits one row of a
+375px phone; turning Measure on takes a second row, at 121px of bar.
+
+Also: the stage now makes room for the rail above 900px
+(`body:has(.presets-panel.open)`), which only `.palette` did — the sunflower
+was sitting under the panel. Measured 1280 -> 920, outer tip at 772 against a
+panel edge at 920.
 
 ## Verification gotchas in this setup
 
@@ -186,25 +230,9 @@ is scraped from ColourLovers, so credit both and do not lean on it commercially.
   and Midjourney reads that as structure. Mid-frequency, isotropic, no hard
   edges, square, no border. Not too fine or it averages to mud at the ~224px
   the encoder sees.
-- **`Show` as a real third section** with a gallery of forms, plus a first-run
-  explainer for why Make and Measure both exist. Land straight in the palette
-  on return visits.
-
-  **CONFIRMED by Gary 2026-08-06:** "we will still use the columns for one page
-  and this for another." So the columns and the sunflower are two PAGES, and
-  Measure stays a lens over the columns rather than becoming a third page —
-  which matches the decision already recorded below, that the measured view is
-  a lens and not a second builder.
-
-  The shape that follows: **Make | Show** as navigation, mutually exclusive,
-  with Measure a lens offered only on Make.
-
-  There is a live inconsistency to fix while doing it, verified by walking the
-  toggles: `showing` and `measuring` are independent, so turning Measure on and
-  then Show leaves Measure lit with `body.measuring` set while `.palette` --
-  its only subject -- is `display:none`. It round-trips cleanly on the way back
-  out, so it is a false state rather than a broken one, and it disappears for
-  free once the two are pages.
+- **A gallery of forms on Show.** The sunflower is one form; the comb is
+  another and is currently locked inside the picker. Still open.
+- **A first-run explainer** for why Make and Measure both exist. Still open.
 - **Re-derive discriminability thresholds in OKLab** so closest-pair can
   become a real threshold. The published numbers are CIELAB and must not be
   quoted across.

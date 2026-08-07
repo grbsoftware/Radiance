@@ -10,6 +10,12 @@ Parametric color palette generator. Define anchor colors, bridges auto-calculate
 - **Bridges: Blend or Wheel** (in ☰) — two ways to be halfway
 - Bottom bar shows all hex codes for easy copy
 
+**Make** and **Show** are the two pages. Make is the palette as columns you can
+edit; Show is the same palette as a sunflower. **Measure** is a lens over Make,
+not a third page — it reports what each colour does on white or black, and it
+says only what it can support (contrast as physics, the closest pair as a
+ranking rather than a threshold, and preference not at all).
+
 ### Bridges are computed in OKLab, not HSL
 
 A bridge is only a bridge if it *looks* halfway between its anchors, and HSL
