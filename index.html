@@ -1717,21 +1717,41 @@
             return rings;
         }
 
-        // An ice-cream cone: rounded outer edge, a point at the tip, and sides
-        // bowed inward. Straight sides read as a pie chart -- the pinch is what
-        // makes the thing look grown rather than divided up.
-        function petalPath(a0, a1, ri, ro) {
-            const P = (ang, rad) => [(rad * Math.cos(ang)).toFixed(2), (rad * Math.sin(ang)).toFixed(2)];
-            const mid = (a0 + a1) / 2;
-            const [tx, ty] = P(mid, ri);
-            const [o0x, o0y] = P(a0, ro);
-            const [o1x, o1y] = P(a1, ro);
-            // Controls pulled toward the axis, which is what bows the sides in.
-            const cr = ri + (ro - ri) * 0.55;
-            const [c0x, c0y] = P(mid + (a0 - mid) * 0.34, cr);
-            const [c1x, c1y] = P(mid + (a1 - mid) * 0.34, cr);
-            return `M${tx},${ty} Q${c0x},${c0y} ${o0x},${o0y} `
-                 + `A${ro},${ro} 0 0 1 ${o1x},${o1y} Q${c1x},${c1y} ${tx},${ty} Z`;
+        // A drop: a round bulb at the outer end, a point at the inner end, and
+        // the sides running as straight tangents between the two -- the same
+        // silhouette as a falling droplet, stem inward.
+        //
+        // The first attempt bowed both sides toward the axis, which is what
+        // "concave" reads as in isolation. Bowed far enough they meet, and the
+        // shape closes into a crescent: the sides stopped being sides and
+        // became the whole outline. Tangents to the bulb cannot do that, and
+        // the bulb keeps the outer end round no matter how the ring is sized.
+        // The bulb sits INWARD and the point runs outward, so each ring's tips
+        // pass between the bulbs of the ring outside it. That overlap is what
+        // makes it read as scales rather than as concentric bands, and the
+        // angular gap is what keeps the scales from fusing into a disc.
+        function dropPath(a, innerEdge, tipR, halfSpan) {
+            // The bulb has to be sized against the slot at ITS OWN centre, not
+            // at the ring's inner edge -- the centre sits a full radius further
+            // out, and measuring at the edge starved the inner rings. The
+            // centre depends on the radius, so solve rather than guess:
+            //   rb <= sin(h) * (innerEdge + rb)
+            const s = Math.sin(halfSpan);
+            const rb = Math.min(s * innerEdge / Math.max(0.05, 1 - s),
+                                (tipR - innerEdge) * 0.42);
+            const rc = innerEdge + rb;       // centre of the bulb
+            const L = tipR - rc;             // bulb centre out to the tip
+            const beta = Math.asin(Math.min(0.999, rb / Math.max(rb, L)));
+            const d = Math.sqrt(Math.max(0, L * L - rb * rb));
+
+            const at = (u, v) => `${(u * Math.cos(a) - v * Math.sin(a)).toFixed(2)},`
+                               + `${(u * Math.sin(a) + v * Math.cos(a)).toFixed(2)}`;
+            const u = tipR - d * Math.cos(beta), v = d * Math.sin(beta);
+            // Major arc AND the sweep that carries it round the inner side. The
+            // other sweep takes the long way over the top, which bulges the
+            // shape out past its own tip.
+            return `M${at(tipR, 0)} L${at(u, v)} `
+                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 1 ${at(u, -v)} Z`;
         }
 
         function renderSunflower() {
@@ -1742,22 +1762,26 @@
                 return;
             }
             const rings = sunflowerRings(anchors, SUN_DEPTH);
-            const r0 = 26, rMax = 150, band = (rMax - r0) / rings.length;
+            const r0 = 8, rMax = 152, band = (rMax - r0) / rings.length;
             let out = '';
             rings.forEach((ring, k) => {
-                const ri = r0 + k * band + 2;
-                const ro = r0 + (k + 1) * band - 2;
+                // Each ring reaches back under the one inside it -- the scale
+                // overlap. Without it the rings sit in separate bands and the
+                // whole thing reads as a dartboard.
+                const innerEdge = r0 + k * band - (k ? band * 0.42 : 0);
+                const tipR = r0 + (k + 1) * band;
                 const step = (Math.PI * 2) / ring.length;
-                const gap = step * 0.1;
-                // Every ring past the first is offset by half its own step, so a
-                // subdivision sits between the two florets it came from.
+                const halfSpan = step / 2 * 0.86;      // the rest is the gap
+                // Every ring past the first is offset by half its own step, so
+                // a subdivision sits between the two florets it came from.
                 const offset = k === 0 ? 0 : 0.5;
                 ring.forEach((hex, i) => {
-                    const c = -Math.PI / 2 + (i + offset) * step;
-                    out += `<path d="${petalPath(c - step / 2 + gap / 2, c + step / 2 - gap / 2, ri, ro)}" `
+                    const a = -Math.PI / 2 + (i + offset) * step;
+                    out += `<path d="${dropPath(a, innerEdge, tipR, halfSpan)}" `
                          + `fill="${hex}"></path>`;
                 });
             });
+            // Painted inner rings first so the outer scales lap over them.
             svg.innerHTML = out;
         }
 
