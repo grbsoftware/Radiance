@@ -66,12 +66,41 @@ Settled, do not re-litigate:
   tangents cannot do that, which is the reason for this construction.
 - A sharp tip reads as a **leaf**, not a drop. The nib is what fixes it and it
   was the larger of the two errors — 0.42 -> 0.313 alone would not have done it.
+- **The two arcs take opposite `large-arc` flags, and both sweeps are 0.**
+  Because `rn < rb` the tangents converge toward the nib, so they wrap less
+  than half of it and more than half of the bulb: nib minor, bulb major. See
+  the trap below for the sweep.
 - Bulb size solves `rb <= sin(halfSpan) * (innerEdge + rb)`. Measuring the
   angular slot at the ring's inner edge instead starves the inner rings. In
   practice the length cap binds on every ring, so all four rings carry the same
   proportions.
 - The ring **overlap** is also 0.42 (`band * 0.42` in `renderSunflower`) and is
   a DIFFERENT number that happened to match. It was not changed.
+
+### Trap — an SVG arc has no centre; the FLAGS pick one
+
+`A rx,ry rot large sweep x,y` gives two endpoints and a radius, which admits
+**two candidate centres** either side of the chord. The flags choose. So a
+sweep flag is not a property of the shape, it is a property of the shape *plus
+the direction you happen to be walking it*.
+
+The new drop runs lower -> upper round the bulb where the old sharp-tipped
+version ran upper -> lower. Carrying its `sweep=1` across selected the far
+centre, at y -29.05 instead of -19.25, which bulged the bulb toward the tip and
+crossed the flanks. Gary spotted it on sight; nothing in the code complained.
+
+**How to catch it without eyes,** which is the part worth keeping — the checks
+that a self-crossing drop fails and a correct one passes, all cheap:
+
+- `getBBox()` must equal `[-rb, rb] x [-tipR, -innerEdge]` for the ring-0
+  floret, which points straight up. A wrong centre overshoots the tip.
+- `isPointInFill` at five probes: bulb centre and mid-axis INSIDE; just past
+  the tip, beside the taper, and past the bulb OUTSIDE.
+- Sample `getPointAtLength` round every path: none may exceed its own `tipR`
+  or fall inside its own `innerEdge`. Measured 0.00 and -0.02 after the fix.
+
+Screenshots are unavailable here (see below), so these are not a convenience —
+they are the only way to see the shape at all.
 
 ## Verification gotchas in this setup
 

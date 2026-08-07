@@ -1764,13 +1764,23 @@
                                + `${(u * Math.sin(a) + v * Math.cos(a)).toFixed(2)}`;
             const pau = rc + rb * cg, pav = rb * sg;   // tangent point on bulb
             const pbu = cn + rn * cg, pbv = rn * sg;   // tangent point on nib
-            // Both arcs are major, and the sweep carries each round the OUTER
-            // side of its own circle. The other sweep cuts back across the
-            // body and turns the drop inside out.
+            // The two arcs take OPPOSITE large-arc flags, and that is forced by
+            // the geometry rather than chosen: because rn < rb the tangents
+            // converge toward the nib, so they wrap less than half of it and
+            // more than half of the bulb. Nib minor, bulb major.
+            //
+            // Both sweeps are 0. SVG does not take a centre -- it DERIVES one
+            // from the flags, and there are two candidates either side of the
+            // chord. This path runs lower -> upper round the bulb where the
+            // previous sharp-tipped version ran upper -> lower, and reversing
+            // the direction flips the sweep. Carrying the old 1 over selected
+            // the far centre, which bulged the bulb toward the tip and crossed
+            // the flanks. The shape self-intersected and still looked almost
+            // plausible at floret size.
             return `M${at(pau, pav)} L${at(pbu, pbv)} `
-                 + `A${rn.toFixed(2)},${rn.toFixed(2)} 0 1 1 ${at(pbu, -pbv)} `
+                 + `A${rn.toFixed(2)},${rn.toFixed(2)} 0 0 0 ${at(pbu, -pbv)} `
                  + `L${at(pau, -pav)} `
-                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 1 ${at(pau, pav)} Z`;
+                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 0 ${at(pau, pav)} Z`;
         }
 
         function renderSunflower() {
