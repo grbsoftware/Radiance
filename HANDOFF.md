@@ -32,25 +32,46 @@ Built today, all verified in-browser:
 8. **The sunflower** (`Show` toggle). Recursive midpoints of a CLOSED anchor
    ring: n, n, 2n, 4n outward, so 3 anchors give 24 florets.
 
-## The one thing still open in the code
+## The drop shape — FITTED TO GARY'S REFERENCE, awaiting his eye
 
-**The sunflower drop shape is not right yet.** Gary: "pretty but not exactly
-the right shape, but it's still beautiful." UNCOMMITTED at time of writing if
-the commit below did not land — check `git status`.
+Gary supplied a reference droplet and asked for the path to come from the
+image. It does, by measurement rather than autotrace — a traced path is fixed
+coordinates and every ring needs a different size, so the shape has to stay
+parametric. What the trace gave, off the 1024px image:
 
-Settled so far, do not re-litigate:
+    drop runs y 100 -> 930          length 830
+    widest 520 at y ~695            bulb radius 260, centre y 670
+    bulb / length                   0.313      (code had 0.42)
+    tip -> bulb centre 570          flanks at asin(260/570) = 27.1 deg
+    tip rounds at radius ~22        nib = 0.085 of the bulb
+
+The check that made it a fit rather than a guess: 27.1 deg predicts a width of
+**102** a hundred pixels below the tip, and the image reads **~100**. So the
+flanks really are STRAIGHT tangents — the old code had that part right and the
+whole difference was the missing nib plus the too-fat bulb.
+
+`dropPath` is now **two circles and their external tangents** (bulb inward, nib
+at the tip), `cos g = (rb - rn) / D`, which reduces to the old
+tangent-from-a-point case at `rn = 0`. Constants are named `DROP_BULB` and
+`DROP_NIB` at the top of the function.
+
+Settled, do not re-litigate:
 
 - Bulb **inward**, point **outward**. (First attempt had it the other way.)
 - Rings **overlap** so each ring's bulbs sit between the tips of the ring
   inside it — "almost like scales except there are gaps in between".
-- Sides are straight tangents from tip to bulb. An earlier version bowed both
-  sides toward the axis; bowed far enough they meet and the shape closes into
-  a **crescent**. That was the "claw" look in the first screenshot.
-- Bulb radius is currently **0.42** of the drop's length. Gary's reference
-  image is nearer **0.33** — longer taper, less balloon. That is the first
-  knob to try.
+- Sides are straight tangents. An earlier version bowed both sides toward the
+  axis; bowed far enough they meet and the shape closes into a **crescent**.
+  That was the "claw" look in the first screenshot. Two circles and their
+  tangents cannot do that, which is the reason for this construction.
+- A sharp tip reads as a **leaf**, not a drop. The nib is what fixes it and it
+  was the larger of the two errors — 0.42 -> 0.313 alone would not have done it.
 - Bulb size solves `rb <= sin(halfSpan) * (innerEdge + rb)`. Measuring the
-  angular slot at the ring's inner edge instead starves the inner rings.
+  angular slot at the ring's inner edge instead starves the inner rings. In
+  practice the length cap binds on every ring, so all four rings carry the same
+  proportions.
+- The ring **overlap** is also 0.42 (`band * 0.42` in `renderSunflower`) and is
+  a DIFFERENT number that happened to match. It was not changed.
 
 ## Verification gotchas in this setup
 

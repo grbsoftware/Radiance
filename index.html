@@ -1717,19 +1717,30 @@
             return rings;
         }
 
-        // A drop: a round bulb at the outer end, a point at the inner end, and
-        // the sides running as straight tangents between the two -- the same
-        // silhouette as a falling droplet, stem inward.
+        // A drop: two circles on one axis -- a big bulb inward, a small nib at
+        // the tip -- joined by their external tangents. The bulb sits INWARD
+        // and the nib runs outward, so each ring's tips pass between the bulbs
+        // of the ring outside it. That overlap is what makes it read as scales
+        // rather than as concentric bands, and the angular gap is what keeps
+        // the scales from fusing into a disc.
         //
-        // The first attempt bowed both sides toward the axis, which is what
-        // "concave" reads as in isolation. Bowed far enough they meet, and the
-        // shape closes into a crescent: the sides stopped being sides and
-        // became the whole outline. Tangents to the bulb cannot do that, and
-        // the bulb keeps the outer end round no matter how the ring is sized.
-        // The bulb sits INWARD and the point runs outward, so each ring's tips
-        // pass between the bulbs of the ring outside it. That overlap is what
-        // makes it read as scales rather than as concentric bands, and the
-        // angular gap is what keeps the scales from fusing into a disc.
+        // The proportions are MEASURED off Gary's reference droplet, not
+        // chosen: on a 1024px image the drop ran y 100 -> 930 (length 830) and
+        // was 520 wide at its widest, so the bulb is 0.313 of the length and
+        // its centre sits 570 from the tip -- flanks at asin(260/570) = 27.1
+        // degrees. That predicts a width of 102 a hundred pixels below the tip
+        // and the image reads ~100, which is what confirms the flanks really
+        // are STRAIGHT tangents rather than a bowed curve. The tip rounds at
+        // radius ~22, i.e. 0.085 of the bulb.
+        //
+        // The nib is the whole difference from the previous version, which
+        // ended in a sharp corner and read as a leaf or a claw. It is also why
+        // an earlier attempt bowed both sides toward the axis chasing
+        // "concave": bowed far enough the sides meet and the shape closes into
+        // a crescent. Two circles and their tangents cannot do that.
+        const DROP_BULB = 0.313;   // bulb radius as a fraction of drop length
+        const DROP_NIB  = 0.085;   // nib radius as a fraction of the bulb
+
         function dropPath(a, innerEdge, tipR, halfSpan) {
             // The bulb has to be sized against the slot at ITS OWN centre, not
             // at the ring's inner edge -- the centre sits a full radius further
@@ -1738,20 +1749,28 @@
             //   rb <= sin(h) * (innerEdge + rb)
             const s = Math.sin(halfSpan);
             const rb = Math.min(s * innerEdge / Math.max(0.05, 1 - s),
-                                (tipR - innerEdge) * 0.42);
+                                (tipR - innerEdge) * DROP_BULB);
+            const rn = rb * DROP_NIB;
             const rc = innerEdge + rb;       // centre of the bulb
-            const L = tipR - rc;             // bulb centre out to the tip
-            const beta = Math.asin(Math.min(0.999, rb / Math.max(rb, L)));
-            const d = Math.sqrt(Math.max(0, L * L - rb * rb));
+            const cn = tipR - rn;            // centre of the nib
+            const D  = cn - rc;
+            // For two circles on one axis the external tangent touches each at
+            // the same angle from the centre line, with cos g = (rb - rn) / D.
+            // At rn = 0 this reduces to the old tangent-from-a-point case.
+            const cg = Math.min(0.999, (rb - rn) / Math.max(1e-6, D));
+            const sg = Math.sqrt(Math.max(0, 1 - cg * cg));
 
             const at = (u, v) => `${(u * Math.cos(a) - v * Math.sin(a)).toFixed(2)},`
                                + `${(u * Math.sin(a) + v * Math.cos(a)).toFixed(2)}`;
-            const u = tipR - d * Math.cos(beta), v = d * Math.sin(beta);
-            // Major arc AND the sweep that carries it round the inner side. The
-            // other sweep takes the long way over the top, which bulges the
-            // shape out past its own tip.
-            return `M${at(tipR, 0)} L${at(u, v)} `
-                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 1 ${at(u, -v)} Z`;
+            const pau = rc + rb * cg, pav = rb * sg;   // tangent point on bulb
+            const pbu = cn + rn * cg, pbv = rn * sg;   // tangent point on nib
+            // Both arcs are major, and the sweep carries each round the OUTER
+            // side of its own circle. The other sweep cuts back across the
+            // body and turns the drop inside out.
+            return `M${at(pau, pav)} L${at(pbu, pbv)} `
+                 + `A${rn.toFixed(2)},${rn.toFixed(2)} 0 1 1 ${at(pbu, -pbv)} `
+                 + `L${at(pau, -pav)} `
+                 + `A${rb.toFixed(2)},${rb.toFixed(2)} 0 1 1 ${at(pau, pav)} Z`;
         }
 
         function renderSunflower() {
