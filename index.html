@@ -345,8 +345,32 @@
            signal that says this page is to be READ rather than operated, and
            it costs no network request, which the app has never made.
         */
+        /* Read pins the viewport at EVERY width, not just above 900px.
+           Without this the book is a scroll container in name only: it has
+           overflow-y:auto but nothing bounds its height, so it grows to its
+           full 8,600px, the DOCUMENT scrolls instead, and two things break at
+           once -- the controls bar is stranded at the bottom of the document
+           (measured at 860x700: offscreen from the moment Read opens, 5,740px
+           of scrolling to reach it again), and the chip rail stops sticking,
+           because overflow-y:auto already made the book the sticky scrollport
+           and that scrollport never moves. Gary found this by clicking a chip
+           and watching the page vanish.
+
+           Scoped to body.reading so the palette keeps scrolling the document
+           on a phone, which is what Make wants. */
+        body.reading {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
         .book {
             flex: 1;
+            /* A flex item's automatic minimum size is its content, which is
+               taller than the screen. overflow-y:auto already zeroes it per
+               spec, but stating it survives someone changing the overflow. */
+            min-height: 0;
             display: none;
             overflow-y: auto;
             overscroll-behavior: contain;
