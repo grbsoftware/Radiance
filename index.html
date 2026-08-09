@@ -329,9 +329,180 @@
 
         body.showing .stage { display: flex; }
         body.showing .palette { display: none; }
+        body.reading .book { display: block; }
+        body.reading .palette { display: none; }
 
         .stage.on-white { background: #fff; }
         .stage.on-black { background: #000; }
+
+        /* --- Read: the book ------------------------------------------------
+           The only scrolling region in the app. Make and Show are fixed to the
+           viewport; a book is a thing you move THROUGH, so it owns its own
+           overflow rather than letting the body scroll -- above 900px the body
+           is height:100% overflow:hidden and would simply clip it.
+
+           Serif for the prose, and not only for period flavour: it is the one
+           signal that says this page is to be READ rather than operated, and
+           it costs no network request, which the app has never made.
+        */
+        .book {
+            flex: 1;
+            display: none;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scroll-behavior: smooth;
+        }
+
+        .book.on-black { background: #0B0B0B; color: #E8E4DE; }
+        .book.on-white { background: #FBF9F5; color: #1A1714; }
+
+        /* The plate is the glossy full-bleed opener. aspect-ratio rather than
+           a height, so it holds its shape from a phone to a monitor, and the
+           image (when there is one) is a background so it can crop rather than
+           letterbox -- a plate with bars around it is not full bleed. */
+        .plate {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            padding: clamp(20px, 5vw, 64px);
+        }
+
+        @media (max-width: 700px) {
+            .plate { aspect-ratio: 4 / 5; }
+        }
+
+        /* A scrim, not a guess. The plate carries a photograph nobody has
+           chosen yet, so the title cannot rely on the colour behind it -- this
+           is the same problem the game HUD solves with a wash, and the same
+           answer: darken a band at the bottom and put white on it. */
+        .plate::after {
+            content: '';
+            position: absolute;
+            inset: 40% 0 0 0;
+            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.72));
+            pointer-events: none;
+        }
+
+        .plate-text { position: relative; z-index: 1; color: #fff; }
+
+        .plate-name {
+            font-size: clamp(48px, 12vw, 132px);
+            line-height: 0.9;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 24px rgba(0,0,0,0.5);
+        }
+
+        .plate-hex {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            letter-spacing: 2px;
+            opacity: 0.85;
+            margin-top: 10px;
+        }
+
+        .measure {
+            max-width: 34rem;
+            margin: 0 auto;
+            padding: clamp(28px, 5vw, 56px) 24px;
+        }
+
+        .standfirst {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(19px, 2.6vw, 24px);
+            line-height: 1.45;
+            font-style: italic;
+            opacity: 0.82;
+            margin-bottom: 1.4em;
+        }
+
+        .prose {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 17px;
+            line-height: 1.72;
+        }
+
+        .prose p + p { margin-top: 1.1em; }
+
+        /* initial-letter is still not in every engine, so the drop cap is a
+           float with a measured line-height rather than a declaration that
+           silently does nothing in Firefox. */
+        .prose p:first-child::first-letter {
+            float: left;
+            font-size: 3.4em;
+            line-height: 0.82;
+            padding: 0.06em 0.1em 0 0;
+            font-weight: 400;
+        }
+
+        .inserts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 2em;
+        }
+
+        .insert {
+            aspect-ratio: 1;
+            background-size: cover;
+            background-position: center;
+            border-radius: 2px;
+        }
+
+        /* Unsourced prose says so, on the page, in the reader's face. The
+           whole point of the format is that a gap is visible rather than
+           invisible -- a quiet `verified: false` in a JSON file protects
+           nobody. */
+        .unverified {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+            border: 1px solid currentColor;
+            border-radius: 3px;
+            padding: 8px 12px;
+            margin-bottom: 1.6em;
+            /* NOT quieter than this. At 0.55 it measured 3.91 against the
+               paper ground -- under the 4.5 bar, which would make the one
+               notice on the page that must be read the hardest thing on it
+               to read. 0.8 measures 7.0 and still sits back from the prose. */
+            opacity: 0.8;
+        }
+
+        /* Jump rail. aria-current marks the entry in view, so the announced
+           state and the painted state are the same attribute rather than two
+           that can drift. */
+        .chips {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            backdrop-filter: blur(12px);
+        }
+
+        .book.on-black .chips { background: rgba(11,11,11,0.82); }
+        .book.on-white .chips { background: rgba(251,249,245,0.82); }
+
+        .chips::-webkit-scrollbar { display: none; }
+
+        .chip {
+            flex: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.15s;
+        }
+
+        .chip[aria-current="true"] { transform: scale(1.25); border-color: currentColor; }
 
         #sunflower {
             width: min(100%, 78vh);
@@ -630,10 +801,13 @@
         <svg id="sunflower" viewBox="-160 -160 320 320" aria-label="Palette as a sunflower"></svg>
     </div>
     
+    <div class="book on-black" id="book"></div>
+
     <div class="controls">
         <div class="seg pages" id="page-seg" role="group" aria-label="View">
             <button type="button" data-page="make" aria-pressed="true">Make</button>
             <button type="button" data-page="show" aria-pressed="false">Show</button>
+            <button type="button" data-page="read" aria-pressed="false">Read</button>
         </div>
         <div class="count-group">
             <button id="btn-remove">−</button>
@@ -2025,10 +2199,136 @@
 
         function syncGroundButton() {
             // The ground is a property of whatever is being LOOKED at: the
-            // stage always has one, and the columns only acquire one when the
-            // measured view starts reporting against it.
+            // stage always has one, the book is printed on one, and the
+            // columns only acquire one when the measured view starts
+            // reporting against it.
             document.getElementById('btn-ground').hidden =
-                !(page === 'show' || measuring);
+                !(page === 'show' || page === 'read' || measuring);
+        }
+
+        // ---- Read -------------------------------------------------------
+        // Content lives in read.json, not in this file. Twelve colours hand
+        // written into the markup is how a 2,000 line file becomes 6,000, and
+        // it would make correcting a historical claim a code edit.
+        let bookEntries = null;
+
+        function paintBook() {
+            const book = document.getElementById('book');
+            book.classList.toggle('on-white', ground === '#FFFFFF');
+            book.classList.toggle('on-black', ground !== '#FFFFFF');
+        }
+
+        function openBook() {
+            if (bookEntries) return;
+            fetch('read.json')
+                .then(r => {
+                    if (!r.ok) throw new Error('read.json ' + r.status);
+                    return r.json();
+                })
+                .then(data => { bookEntries = data.entries; renderBook(); })
+                .catch(err => {
+                    // Loud on purpose. A silent catch here makes a JSON typo,
+                    // a renamed file and an empty cached body produce the one
+                    // identical blank page -- the mistake index.html in the
+                    // other project shipped and had to be undone.
+                    console.warn('Read: could not load read.json --', err.message);
+                    document.getElementById('book').innerHTML =
+                        '<div class="measure"><p class="prose">The book could not be '
+                        + 'loaded. Check the console.</p></div>';
+                });
+        }
+
+        function esc(s) {
+            return String(s).replace(/[&<>"]/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        }
+
+        function renderBook() {
+            const book = document.getElementById('book');
+
+            const chips = bookEntries.map((e, i) =>
+                `<button type="button" class="chip" data-jump="${esc(e.id)}" `
+              + `style="background:${esc(e.swatch)}" aria-label="${esc(e.name)}" `
+              + `aria-current="${i === 0}"></button>`).join('');
+
+            const spreadsHtml = bookEntries.map(e => {
+                // No plate yet, so the swatch stands in. A flat field would
+                // read as a mistake; a raked gradient reads as a placeholder
+                // and still shows what the type has to survive.
+                const bg = e.plate
+                    ? `background-image:url(${esc(e.plate)})`
+                    : `background-image:linear-gradient(135deg,${esc(e.swatch)},`
+                      + `color-mix(in oklab, ${esc(e.swatch)} 55%, #000))`;
+
+                const warn = e.status === 'verified' ? '' :
+                    '<p class="unverified">Unverified — this text has not been '
+                    + 'checked against a source.</p>';
+
+                const body = e.body.map(p => `<p>${esc(p.text)}</p>`).join('');
+
+                const inserts = e.inserts.length
+                    ? `<div class="inserts">${e.inserts.map(src =>
+                        `<div class="insert" style="background-image:url(${esc(src)})"></div>`
+                      ).join('')}</div>`
+                    : '';
+
+                return `<article class="spread" id="entry-${esc(e.id)}">`
+                     + `<div class="plate" style="${bg}"><div class="plate-text">`
+                     + `<div class="plate-name">${esc(e.name)}</div>`
+                     + `<div class="plate-hex">${esc(e.swatch)}</div></div></div>`
+                     + `<div class="measure">${warn}`
+                     + `<p class="standfirst">${esc(e.standfirst)}</p>`
+                     + `<div class="prose">${body}</div>${inserts}</div></article>`;
+            }).join('');
+
+            book.innerHTML = `<div class="chips" id="chips">${chips}</div>${spreadsHtml}`;
+
+            book.querySelector('#chips').addEventListener('click', ev => {
+                const b = ev.target.closest('[data-jump]');
+                if (b) document.getElementById('entry-' + b.dataset.jump)
+                    .scrollIntoView({ block: 'start' });
+            });
+
+            // Which entry is in view drives the chip, off a scroll handler
+            // rather than an IntersectionObserver. IO is the better-shaped
+            // tool and was written first -- but it does not fire AT ALL in
+            // the preview pane used to check this work (zero callbacks, not
+            // even the initial one), so it cannot be verified here, and an
+            // unverifiable mechanism is worse than a plain one that can be
+            // measured. At six elements the cost difference is noise.
+            const spreads = [...book.querySelectorAll('.spread')];
+            const chipEls = [...book.querySelectorAll('.chip')];
+            let ticking = false;
+
+            // The reading line is 80px down the VIEWPORT, just under the
+            // sticky chips -- a constant, not an offset from the book. Both
+            // are the same above 900px where the book's own top is 0, and
+            // only the constant is right below it, where the book is taller
+            // than the viewport and its top slides away as you scroll.
+            function syncChip() {
+                ticking = false;
+                let current = spreads[0];
+                for (const s of spreads) {
+                    if (s.getBoundingClientRect().top <= 80) current = s;
+                }
+                const id = current.id.replace('entry-', '');
+                chipEls.forEach(c =>
+                    c.setAttribute('aria-current', String(c.dataset.jump === id)));
+            }
+
+            function onScroll() {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(syncChip);
+            }
+
+            // WHICH element scrolls changes with the breakpoint: above 900px
+            // the body is height:100% overflow:hidden and the book is its own
+            // scroller; below it the document scrolls and the book just grows,
+            // so a listener on the book alone never fires on a phone.
+            book.addEventListener('scroll', onScroll);
+            window.addEventListener('scroll', onScroll, { passive: true });
+            syncChip();
         }
 
         // Make and Show are pages, so Measure -- a lens over the columns --
@@ -2038,17 +2338,25 @@
         // `measuring` is remembered rather than cleared, so the lens is still
         // on when you come back to it.
         function setPage(name) {
-            page = name === 'show' ? 'show' : 'make';
+            page = ['make', 'show', 'read'].indexOf(name) >= 0 ? name : 'make';
             document.body.classList.toggle('showing', page === 'show');
+            document.body.classList.toggle('reading', page === 'read');
             document.querySelectorAll('#page-seg button').forEach(b =>
                 b.setAttribute('aria-pressed', String(b.dataset.page === page)));
             const m = document.getElementById('btn-measure');
             m.hidden = page !== 'make';
             m.setAttribute('aria-pressed', String(measuring));
             document.body.classList.toggle('measuring', page === 'make' && measuring);
+            // The palette-size stepper belongs to the palette. On Read it is
+            // pointing at nothing on screen, and a control that does something
+            // invisible is worse than one that is absent.
+            document.querySelector('.count-group').hidden = page === 'read';
             syncGroundButton();
             paintStage();
-            if (page === 'show') renderSunflower(); else render();
+            paintBook();
+            if (page === 'show') renderSunflower();
+            else if (page === 'read') openBook();
+            else render();
         }
 
         document.getElementById('page-seg').addEventListener('click', e => {
@@ -2074,6 +2382,7 @@
             document.getElementById('btn-ground').textContent =
                 ground === '#FFFFFF' ? 'on white' : 'on black';
             paintStage();
+            paintBook();
             render();
         });
 

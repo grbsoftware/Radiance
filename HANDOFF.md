@@ -199,6 +199,23 @@ panel edge at 920.
 - **`setPointerCapture` will not engage for synthetic events.** Stub only
   `hasPointerCapture` to exercise a real drag handler. Gary confirmed the real
   mouse works.
+- **`IntersectionObserver` never fires. Not once** — zero callbacks, not even
+  the initial one every observer gets on `observe()`. Anything built on it is
+  unverifiable here, which is why the Read page's chip tracking is a scroll
+  handler instead. Do not read a silent observer as a working one.
+- **`scroll-behavior: smooth` never advances**, same cause as the frozen
+  transitions: no frames. `scrollIntoView()` and an assigned `scrollTop` both
+  appear to do nothing on an element that sets it. Set
+  `el.style.scrollBehavior = 'auto'` before measuring any scroll, and put it
+  back after. This looked exactly like a broken click handler for two rounds.
+- **The console buffer survives a reload.** Errors from a version you have
+  already fixed keep coming back, which reads as "the fix did not take".
+  Confirm against the served source (`documentElement.innerHTML.includes(...)`)
+  rather than trusting the log.
+- **Cross-check a "which element is in view" result with
+  `document.elementFromPoint()`.** It is independent of whatever geometry the
+  code under test is doing, so agreement between the two is real evidence and
+  not the same calculation run twice.
 - PowerShell here-strings break on embedded double quotes. Write the commit
   message to a file and use `git commit -F`.
 

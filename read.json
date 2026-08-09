@@ -1,0 +1,93 @@
+{
+  "_comment": "Content for the Read page. Every entry carries a status: 'unverified' means the prose has not been checked against a source and the page SAYS SO on screen. Paragraphs may carry their own `source`; one without a source is not a claim this book is making yet. Do not flip a status to 'verified' without filling in sources.",
+  "entries": [
+    {
+      "id": "red",
+      "name": "Red",
+      "swatch": "#CE2029",
+      "standfirst": "The first colour humans reached for, and the one we never put down.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "The color red has been used by humans since prehistoric times. It was one of the first colors to be used in cave paintings, and it can be found in many ancient artifacts. Red has been used in many cultures to signify danger, power, and strength.", "source": null },
+        { "text": "Red has been used to represent many things throughout history, from danger to love. It is a powerful and vibrant color, and it can be used to create many different moods and feelings.", "source": null },
+        { "text": "On the monochromatic scale, red is the most vibrant and intense of the primary colors. It is a warm color that can be used to create a sense of energy, passion, and excitement.", "source": null }
+      ]
+    },
+    {
+      "id": "orange",
+      "name": "Orange",
+      "swatch": "#E87722",
+      "standfirst": "English had no word for it until the fruit arrived and lent its own.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "The color orange has been around since ancient times, but it wasn't until the 18th century that it was officially added to the monochromatic scale. In 1704, Isaac Newton created the first official color wheel and included orange in his color spectrum. He described orange as a mix of red and yellow, and he believed it was the product of the two primary colors.", "source": null },
+        { "text": "Orange was then categorized into two distinct hues: reddish-orange and yellowish-orange. The reddish-orange hue was seen as a warmer and more vibrant color, while the yellowish-orange hue was seen as a softer and more muted color.", "source": null },
+        { "text": "The color orange began to gain popularity in the 19th century, as it was used in various art movements such as Impressionism and Expressionism. It was also used in fashion and interior design to create a cheerful and inviting atmosphere.", "source": null },
+        { "text": "Today, orange is still a popular color and is used in a variety of contexts, from branding and advertising to art and design. It is also a popular color in the home, as it is believed to bring a sense of warmth and energy to any room.", "source": null }
+      ]
+    },
+    {
+      "id": "yellow",
+      "name": "Yellow",
+      "swatch": "#EFCB33",
+      "standfirst": "Beautiful, ancient, and for most of its history, poisonous.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "The color yellow has a long history in relation to the monochromatic scale. Yellow is one of the oldest known colors, and it is believed to have been used as a pigment as early as 30,000 BC. The first recorded use of yellow as a color name in English was in the year 1290.", "source": null },
+        { "text": "In the early days of color theory, yellow was categorized as one of the three primary colors along with red and blue. This theory was developed by the French physicist Michel-Eugene Chevreul in the early 19th century. He believed that all other colors could be mixed from these three primaries.", "source": null },
+        { "text": "Yellow is also an important part of the traditional color wheel, which is based on the three primary colors. In this system, yellow is placed between green and orange and is the complement of blue.", "source": null },
+        { "text": "In the modern world, yellow is often used to represent happiness, optimism, and joy. It is also used to signify caution and warning.", "source": null }
+      ]
+    },
+    {
+      "id": "green",
+      "name": "Green",
+      "swatch": "#3F7A4F",
+      "standfirst": "The colour of life, and for one century, of arsenic.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "Green has been a part of the monochromatic color scale since its inception. The first known use of the color green dates back to ancient Egypt, where it was used to represent life and fertility. The ancient Greeks and Romans also used green to represent hope and joy.", "source": null },
+        { "text": "The modern understanding of green as a color on the monochromatic scale was first developed by Isaac Newton in the 17th century. He used a prism to separate white light into its component colors, which he then arranged into a spectrum of seven distinct hues. This spectrum became the basis for the modern color wheel, with green falling between blue and yellow.", "source": null },
+        { "text": "Since Newton's time, green has been an important part of the monochromatic color scale. It is often used to represent nature and growth, as well as being a sign of hope and a symbol of renewal. In art and design, green is often used to create a calming atmosphere or to add a touch of vibrancy to a composition.", "source": null }
+      ]
+    },
+    {
+      "id": "blue",
+      "name": "Blue",
+      "swatch": "#1D4FA8",
+      "standfirst": "One mine in Afghanistan, and a pigment worth more than gold.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "The color blue has been around for centuries, but it was not until the 19th century that the color was first categorized and given a name. The first use of the word 'blue' to describe a color was in the English language in the late 14th century.", "source": null },
+        { "text": "The first use of the word blue in relation to the monochromatic scale was by the French chemist Michel Eugene Chevreul in 1814. Chevreul was the first to use the word blue to describe a single color on the monochromatic scale. He divided the spectrum of visible light into seven colors: red, orange, yellow, green, blue, indigo, and violet.", "source": null },
+        { "text": "The discovery of blue pigments in ancient times is not well documented, but it is believed that the ancient Egyptians were the first to use blue pigments, as evidenced by their use of blue in their artwork. Blue was also used in ancient Greek art, as well as in the art of the Middle Ages.", "source": null },
+        { "text": "In the modern day, blue is used in a variety of ways. It is the color of the sky and the ocean, and it is often used to denote peace, tranquility, and calmness. Blue is also used in a variety of color schemes, from monochromatic to complementary. Blue is a popular color in fashion, interior design, and graphic design.", "source": null }
+      ]
+    },
+    {
+      "id": "purple",
+      "name": "Purple",
+      "swatch": "#7A4FA3",
+      "standfirst": "Thousands of sea snails for a single gram, until an accident in 1856.",
+      "status": "unverified",
+      "plate": null,
+      "inserts": [],
+      "body": [
+        { "text": "The color purple has been around for centuries and is one of the oldest colors on the monochromatic scale. It is believed that ancient Egyptians were the first to create a purple dye from a type of sea snail. This dye was used to color fabrics and clothing for the wealthy and powerful.", "source": null },
+        { "text": "Throughout history, the color purple has been associated with royalty, power, and wealth. In the 16th century, the color purple was so rare and expensive that only royalty could afford to wear it. The color was so highly valued that it was even used as currency in some parts of the world.", "source": null },
+        { "text": "In the 19th century, purple was added to the monochromatic color scale as a separate color. It was one of the first colors to be categorized in this way and was used to denote a range of shades from light lavender to deep violet.", "source": null },
+        { "text": "Today, purple is still seen as a color of luxury and power. It is often used in fashion, home decor, and branding to convey a sense of sophistication and elegance.", "source": null }
+      ]
+    }
+  ]
+}
