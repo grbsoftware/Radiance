@@ -1,0 +1,4 @@
+
+# Claude registry — architecture stays on local git only, never on GitHub
+local.json
+/CLAUDE.md
