@@ -5,8 +5,8 @@ state: what exists, what is undecided, and what has already been ruled out.
 
 ## 2026-10-02 — the engine is shared, and Read has a new layout
 
-All on `read-page`, **uncommitted** at the end of the session, waiting for
-Gary to look at the layout.
+**LIVE.** `read-page` was fast-forwarded into `main` and pushed (`d979eed`), so
+Pages serves it. sw is at `radiance-v7`.
 
 - **`radiance-color.js` is the colour engine,** pulled out of `index.html` and
   promoted to `C:\Users\grben\shared\radiance-color` as v1.0.0 (Gary asked

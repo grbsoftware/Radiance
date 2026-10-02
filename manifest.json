@@ -2,7 +2,7 @@
   "name": "Radiance",
   "short_name": "Radiance",
   "description": "Parametric color palette generator",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
