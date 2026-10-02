@@ -118,6 +118,10 @@
             gap: 20px;
         }
 
+        /* The display:flex above outranks the browser's own [hidden] rule, so
+           setting .hidden on Read did nothing and the stepper stayed on screen. */
+        .count-group[hidden] { display: none; }
+
         .controls button {
             background: #222;
             color: #fff;
@@ -380,22 +384,73 @@
         .book.on-black { background: #0B0B0B; color: #E8E4DE; }
         .book.on-white { background: #FBF9F5; color: #1A1714; }
 
-        /* The plate is the glossy full-bleed opener. aspect-ratio rather than
-           a height, so it holds its shape from a phone to a monitor, and the
-           image (when there is one) is a background so it can crop rather than
-           letterbox -- a plate with bars around it is not full bleed. */
+        /* A spread is the plate beside the text, tops level. The plate used to
+           be a full-bleed 16:9 opener, and with no photograph in it yet every
+           entry opened on a screen of flat colour -- Gary: "I'm afraid that
+           will appear like an unfinished site". A square sized off the
+           viewport reads as a deliberate swatch at any width instead.
+
+           align-items:start is what keeps the tops level: the plate's top and
+           the text column's top are both the row's top. The text column's
+           first child (the unverified notice now, the standfirst once an entry
+           is verified) carries no top margin, so nothing pushes it down.
+
+           Three widths, three layouts. Wide: the TEXT is centred on the screen
+           and the plate sits out in the left margin (Gary: "further to the
+           left so that the text remains centered for the reader"). Middle:
+           there is no margin wide enough to hold a square, so plate and text
+           centre as a pair. Phone: stacked. */
+        .spread {
+            --plate: clamp(180px, 26vw, 400px);
+            display: grid;
+            grid-template-columns: var(--plate) minmax(0, 34rem);
+            justify-content: center;
+            align-items: start;
+            gap: clamp(24px, 4vw, 56px);
+            padding: clamp(28px, 5vw, 56px) 24px;
+            /* Below the sticky chip rail (26px chip + 2 x 12px padding), so a
+               jump lands with the plate's top in view rather than under it. */
+            scroll-margin-top: 50px;
+        }
+
+        .spread .measure { max-width: none; margin: 0; padding: 0; }
+
+        /* One column on a phone. The plate stays a square, just smaller than
+           the screen, so the first thing seen is a swatch and a line of text
+           rather than a wall of colour. */
+        @media (max-width: 640px) {
+            .spread { grid-template-columns: minmax(0, 1fr); --plate: min(56vw, 240px); }
+        }
+
+        /* Equal outer columns are what centre the text: whatever the left one
+           holds, the right one mirrors its width with nothing in it. The plate
+           shrinks to its column rather than pushing the text off centre. At
+           1000px the square measures 157px, about the smallest worth showing. */
+        @media (min-width: 1000px) {
+            .spread {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 34rem) minmax(0, 1fr);
+                justify-content: stretch;
+            }
+            .spread .plate { justify-self: start; }
+        }
+
+        /* aspect-ratio rather than a height, so it holds its shape at every
+           size, and the image (when there is one) is a background so it can
+           crop rather than letterbox. */
         .plate {
             position: relative;
-            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: var(--plate);
+            aspect-ratio: 1;
+            /* The plate's width depends on its column, so what is inside it is
+               sized off the PLATE (cqw), not off --plate or the viewport. */
+            container-type: inline-size;
             background-size: cover;
             background-position: center;
             display: flex;
             align-items: flex-end;
-            padding: clamp(20px, 5vw, 64px);
-        }
-
-        @media (max-width: 700px) {
-            .plate { aspect-ratio: 4 / 5; }
+            border-radius: 2px;
+            overflow: hidden;
         }
 
         /* A scrim, not a guess. The plate carries a photograph nobody has
@@ -410,10 +465,12 @@
             pointer-events: none;
         }
 
-        .plate-text { position: relative; z-index: 1; color: #fff; }
+        .plate-text { position: relative; z-index: 1; color: #fff; padding: 8cqw; }
 
+        /* Sized off the plate, not the viewport: the longest name, "Purple",
+           has to fit inside the square at every size. */
         .plate-name {
-            font-size: clamp(48px, 12vw, 132px);
+            font-size: 20cqw;
             line-height: 0.9;
             font-weight: 300;
             letter-spacing: -0.02em;
@@ -425,7 +482,7 @@
             font-size: 13px;
             letter-spacing: 2px;
             opacity: 0.85;
-            margin-top: 10px;
+            margin-top: 3cqw;
         }
 
         .measure {
@@ -494,6 +551,38 @@
                to read. 0.8 measures 7.0 and still sits back from the prose. */
             opacity: 0.8;
         }
+
+        /* A paragraph with no source yet. The rule sits in the gutter, so the
+           text column does not shift when the source arrives. */
+        .prose p.unsourced {
+            border-left: 2px dotted currentColor;
+            padding-left: 12px;
+            margin-left: -14px;
+        }
+
+        /* Sources sit under the entry in the notice's type and opacity, which
+           is measured: 0.8 reads 7.0 against the paper ground. */
+        .sources {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 12px;
+            line-height: 1.55;
+            opacity: 0.8;
+            margin-top: 2.4em;
+            padding-top: 1em;
+            border-top: 1px solid currentColor;
+        }
+
+        .sources h3 {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.6em;
+        }
+
+        .sources ol { padding-left: 1.4em; }
+        .sources li + li { margin-top: 0.35em; }
+        .sources a { color: inherit; text-underline-offset: 2px; }
 
         /* Jump rail. aria-current marks the entry in view, so the announced
            state and the painted state are the same attribute rather than two
@@ -903,6 +992,7 @@
     
     <div class="copied-toast" id="toast">Copied!</div>
     
+    <script src="radiance-color.js"></script>
     <script>
         // Register service worker -- but NEVER on localhost.
         //
@@ -927,6 +1017,23 @@
             if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
         }
         
+        // --- Colour engine -------------------------------------------------
+        // The colour maths lives in radiance-color.js beside this file, loaded
+        // above. It is a shared engine: other projects carry pinned copies, so
+        // a change goes in that file and is released with a version bump --
+        // never into a copy, and never re-implemented here.
+        const {
+            hslToHex, hexToRgb, rgbToHex, srgbToLinear, linearToSrgb,
+            hexToOklab, oklabToLinear, GAMUT_EPS, inGamut, oklabToHex,
+            INK_CROSSOVER, relativeLuminance, inkOn, DEG, hexToOklch,
+            oklchToHex, maxChroma, contrast, oklabDistance, hueDelta,
+        } = RadianceColor;
+
+        // WHICH bridge policy is in force is app state, remembered across
+        // visits; what the two policies mean is the engine's (midpointColor).
+        let bridgeMode = 'blend';
+        const midpointColor = (hex1, hex2) => RadianceColor.midpointColor(hex1, hex2, bridgeMode);
+
         // State: anchors array (2-5 anchors = 3-9 total colors)
         // Raised from 5 to 7 (Gary, 2026-08-06: "3 5 7"). Declared here beside
         // the state it bounds, because it is read by the button sync and by
@@ -955,231 +1062,7 @@
             return hues;
         }
         
-        // HSL to Hex
-        function hslToHex(h, s, l) {
-            s /= 100;
-            l /= 100;
-            const a = s * Math.min(l, 1 - l);
-            const f = n => {
-                const k = (n + h / 30) % 12;
-                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-                return Math.round(255 * color).toString(16).padStart(2, '0');
-            };
-            return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-        }
-        
-        // Parse hex to RGB
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : null;
-        }
-        
-        // RGB to hex
-        function rgbToHex(r, g, b) {
-            return '#' + [r, g, b].map(x => {
-                const hex = Math.round(x).toString(16);
-                return hex.length === 1 ? '0' + hex : hex;
-            }).join('').toUpperCase();
-        }
-        
-        // --- OKLab -------------------------------------------------------
-        // A bridge is only a bridge if it LOOKS halfway between its anchors,
-        // and HSL cannot promise that. HSL's "L" is not perceived lightness:
-        // averaging green (#00FF00) and blue (#0000FF) in HSL gives cyan
-        // (#00FFFF), which is LIGHTER than both colors it sits between. It
-        // does not bridge, it spikes. Measured in perceptual lightness the
-        // anchors are 0.866 and 0.452, so the midpoint should read 0.659 --
-        // HSL puts it at 0.905, off by 0.246.
-        //
-        // OKLab is built so that equal numeric steps look like equal steps.
-        // The same pair midpoints to #00AABF at 0.675, which is where the eye
-        // expects it. Same idea for the anchors themselves: evenly spaced HSL
-        // hues range over 0.41 in perceived lightness (red 0.628, green 0.866,
-        // blue 0.452), which is why a "smooth" ramp never looked smooth.
-        //
-        // hslToHex stays, for the initial evenly-spaced anchors. HSL is a fine
-        // thing to SPECIFY a starting color in. It is just not a thing to
-        // average in, and nothing averages in it any more.
 
-        function srgbToLinear(c) {
-            c /= 255;
-            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-        }
-
-        function linearToSrgb(c) {
-            const v = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-            return Math.max(0, Math.min(255, v * 255));
-        }
-
-        function hexToOklab(hex) {
-            const rgb = hexToRgb(hex);
-            const r = srgbToLinear(rgb.r), g = srgbToLinear(rgb.g), b = srgbToLinear(rgb.b);
-
-            const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
-            const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
-            const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
-
-            const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
-
-            return {
-                L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
-                a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
-                b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
-            };
-        }
-
-        function oklabToLinear(lab) {
-            const l_ = lab.L + 0.3963377774 * lab.a + 0.2158037573 * lab.b;
-            const m_ = lab.L - 0.1055613458 * lab.a - 0.0638541728 * lab.b;
-            const s_ = lab.L - 0.0894841775 * lab.a - 1.2914855480 * lab.b;
-
-            const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
-
-            return [
-                +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-                -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-                -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-            ];
-        }
-
-        // The tolerance is not slop, it is the accuracy of the transform. The
-        // OKLab matrices are fitted approximations, so a colour that sits
-        // exactly ON the sRGB hull round-trips to a channel a few ten-thousandths
-        // the wrong side of zero.
-        //
-        // At 1e-4 that broke an assumption every bisection here depends on --
-        // that the ray out from neutral is in gamut up to one boundary and out
-        // after it. Measured along pure blue's ray (L 0.452, H 264.05): in gamut
-        // at 85% of its chroma, OUT at 90%, 95% and 99% where linear red reads
-        // -0.00063, and in again at 100% where it is exactly 0. A hole in the
-        // middle, and a bisection walks straight into it -- maxChroma returned
-        // 0.2674 for a colour whose chroma is 0.3132, a 15% underestimate, and
-        // oklabToHex used the same pattern to desaturate bridges further than
-        // the gamut actually required.
-        //
-        // 1e-3 clears the transform's own error. In linear light that is well
-        // under a quarter of an 8-bit step, and the clamp at the end of
-        // oklabToHex catches whatever rounds past the edge.
-        const GAMUT_EPS = 1e-3;
-
-        function inGamut(lab) {
-            return oklabToLinear(lab).every(c => c >= -GAMUT_EPS && c <= 1 + GAMUT_EPS);
-        }
-
-        // OKLab is bigger than sRGB, so a midpoint can land somewhere the screen
-        // cannot show. SOMETHING has to give, and the choice of what decides
-        // whether the bridge still reads as a bridge.
-        //
-        // Clamping each channel at the end -- the obvious way, and what this did
-        // -- gives away lightness and hue, the two properties the whole OKLab
-        // change was made to protect. Measured over every bridge the presets
-        // produce, 23 land outside sRGB and clamping moved them up to 3.6 deg in
-        // hue and 0.014 in L. The green -> blue midpoint from the notes above
-        // came out at L 0.676 against a target of 0.659; that residual was
-        // blamed on "gamut clipping" and this is the clipping it meant.
-        //
-        // Reducing CHROMA instead gives away saturation, which is the one thing
-        // a bridge does not promise. Same 23 colors: worst hue shift 0.9 deg,
-        // worst L error 0.0009 -- fifteen times closer. Green -> blue now lands
-        // at 0.659 exactly, so the residual is gone rather than explained.
-        function oklabToHex(lab) {
-            let out = lab;
-            if (!inGamut(lab)) {
-                let lo = 0, hi = 1;
-                for (let i = 0; i < 24; i++) {
-                    const mid = (lo + hi) / 2;
-                    if (inGamut({ L: lab.L, a: lab.a * mid, b: lab.b * mid })) lo = mid;
-                    else hi = mid;
-                }
-                out = { L: lab.L, a: lab.a * lo, b: lab.b * lo };
-            }
-            // Still clamp: chroma reduction cannot rescue an L outside [0,1],
-            // and rounding leaves channels a hair over.
-            return rgbToHex(...oklabToLinear(out).map(c => linearToSrgb(Math.max(0, Math.min(1, c)))));
-        }
-
-        // --- Bridge policy ----------------------------------------------
-        // Both midpoints below are in OKLab and both are perceptually honest.
-        // They differ in what they treat as the thing being halved.
-        //
-        // BLEND averages a and b as coordinates: the true midpoint of the two
-        // colors as POINTS. a and b are signed, so as the anchors' hues diverge
-        // the two vectors point apart and partly cancel -- gold and navy are
-        // both strongly colored and their blend is #7E7D70, a drab olive grey.
-        // Nothing is out of gamut there; the saturation was destroyed by the
-        // arithmetic. Across the shipped presets, 12 bridges lose more than half
-        // their anchors' chroma this way.
-        //
-        // WHEEL averages lightness and chroma as scalars and walks hue around
-        // the shorter arc: the midpoint of the two HUES. Chroma at the bridge is
-        // the mean of the two chromas by construction, so it cannot collapse and
-        // cannot exceed the colors it sits between. Gold -> navy becomes #009083.
-        //
-        // Neither is a better version of the other, which is the test a setting
-        // has to pass to deserve existing. Blend answers "what color is halfway
-        // between these two", wheel answers "what color is halfway around from
-        // one to the other". Blend stays the default because it is what every
-        // saved palette was built with.
-        //
-        // NOT OFFERED: pushing chroma out to the gamut hull. It was measured and
-        // it is a trap -- the headroom is largest exactly where hue means least.
-        // Two pale neutrals whose midpoint chroma is 0.002 have 89x of it, and
-        // spending it turns a soft grey into #C3FF3B. At C near zero the hue is
-        // arbitrary, so amplifying it invents a color rather than finding one.
-        let bridgeMode = 'blend';
-
-        function midpointColor(hex1, hex2) {
-            const c1 = hexToOklab(hex1);
-            const c2 = hexToOklab(hex2);
-            const L = (c1.L + c2.L) / 2;
-
-            if (bridgeMode === 'blend') {
-                return oklabToHex({ L, a: (c1.a + c2.a) / 2, b: (c1.b + c2.b) / 2 });
-            }
-
-            const k1 = Math.hypot(c1.a, c1.b), k2 = Math.hypot(c2.a, c2.b);
-            let h1 = Math.atan2(c1.b, c1.a), h2 = Math.atan2(c2.b, c2.a);
-            // A grey has no hue -- CSS Color 4 calls it powerless. atan2(0,0) is
-            // 0, which is red, so averaging against it would drag every bridge
-            // out of a neutral anchor toward pink. Borrow the other end's hue.
-            if (k1 < 1e-6) h1 = h2;
-            if (k2 < 1e-6) h2 = h1;
-            const d = ((h2 - h1 + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
-            const h = h1 + d / 2, c = (k1 + k2) / 2;
-            return oklabToHex({ L, a: c * Math.cos(h), b: c * Math.sin(h) });
-        }
-
-        // --- Ink on a bar -------------------------------------------------
-        // This used to weight the GAMMA-ENCODED channels 0.299/0.587/0.114 and
-        // switch at 0.5. Two things wrong with that, and they compound: the NTSC
-        // weights are for analogue luma, not for contrast, and the channels have
-        // to be linearised before any weighting means anything.
-        //
-        // The switch point is not a matter of taste either. White beats black
-        // exactly while 1.05/(L+0.05) > (L+0.05)/0.05, so the crossover is
-        // sqrt(0.0525) - 0.05 = 0.1791 -- nowhere near the midpoint, because
-        // contrast is a ratio and black has the shorter run to the floor.
-        //
-        // Measured over the 114 colors in the preset library, the old test put
-        // the wrong ink on 14 of them. The worst was #FF00FF, which got white at
-        // 3.14:1 where black scores 6.70:1. Worst case anywhere goes 3.14 -> 4.72,
-        // so every hex code on screen now clears AA at normal size.
-        const INK_CROSSOVER = Math.sqrt(0.0525) - 0.05;
-
-        function relativeLuminance(hex) {
-            const rgb = hexToRgb(hex);
-            return 0.2126 * srgbToLinear(rgb.r)
-                 + 0.7152 * srgbToLinear(rgb.g)
-                 + 0.0722 * srgbToLinear(rgb.b);
-        }
-
-        function inkOn(hex) {
-            return relativeLuminance(hex) > INK_CROSSOVER ? '#000' : '#fff';
-        }
 
         // --- Measurement ---------------------------------------------------
         // What a snap point is made of. Every function here returns a NUMBER,
@@ -1188,42 +1071,6 @@
         // also the honest one -- these metrics can tell you a palette is
         // legible and coherent, they cannot tell you it is beautiful.
 
-        const DEG = 180 / Math.PI;
-
-        function hexToOklch(hex) {
-            const { L, a, b } = hexToOklab(hex);
-            const C = Math.hypot(a, b);
-            // A neutral has no hue -- CSS Color 4 calls it powerless. Reported
-            // as null rather than as atan2(0, 0), which is red and would put a
-            // grey into the harmony maths as though it pointed somewhere.
-            const H = C < 1e-6 ? null : ((Math.atan2(b, a) * DEG) % 360 + 360) % 360;
-            return { L, C, H };
-        }
-
-        function oklchToHex({ L, C, H }) {
-            const h = (H === null ? 0 : H) / DEG;
-            return oklabToHex({ L, a: C * Math.cos(h), b: C * Math.sin(h) });
-        }
-
-        // The most chroma sRGB can actually show at this lightness and hue.
-        // The hull is nothing like a circle -- yellow reaches far further out
-        // than blue -- so "hold chroma constant across these hues" is only a
-        // request that can be granted up to the SMALLEST hull among them.
-        function maxChroma(L, H) {
-            if (H === null) return 0;
-            const h = H / DEG, cos = Math.cos(h), sin = Math.sin(h);
-            let lo = 0, hi = 0.4;
-            for (let i = 0; i < 24; i++) {
-                const mid = (lo + hi) / 2;
-                if (inGamut({ L, a: mid * cos, b: mid * sin })) lo = mid; else hi = mid;
-            }
-            return lo;
-        }
-
-        function contrast(hex1, hex2) {
-            const a = relativeLuminance(hex1), b = relativeLuminance(hex2);
-            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        }
 
         // --- Harmony --------------------------------------------------------
         // The named harmonies are angular relationships, so the STRUCTURE ports
@@ -1252,11 +1099,6 @@
             return snaps.filter((s, i) => snaps.findIndex(o => Math.abs(o.spacing - s.spacing) < 1) === i);
         }
 
-        // Signed shortest arc, so a palette walking one way round the wheel
-        // reads as consistent rather than as alternating +350/-10.
-        function hueDelta(from, to) {
-            return ((to - from + 180) % 360 + 360) % 360 - 180;
-        }
 
         function classifyHarmony(hexes) {
             const hues = hexes.map(h => hexToOklch(h).H);
@@ -1579,14 +1421,6 @@
         // there -- press + and the bridge you were looking at simply becomes an
         // anchor you can edit. Nothing else shifts.
 
-        // Perceptual distance, so "widest gap" means the gap that LOOKS widest.
-        // Hue distance would call red->green and green->blue equal at 120
-        // degrees each when the eye does not read them that way at all.
-        function oklabDistance(hex1, hex2) {
-            const c1 = hexToOklab(hex1);
-            const c2 = hexToOklab(hex2);
-            return Math.hypot(c1.L - c2.L, c1.a - c2.a, c1.b - c2.b);
-        }
 
         function addColors() {
             if (anchors.length >= MAX_ANCHORS) return;
@@ -2244,7 +2078,7 @@
 
         function openBook() {
             if (bookEntries) return;
-            fetch('read.json')
+            fetch('read.json', { cache: 'no-cache' })
                 .then(r => {
                     if (!r.ok) throw new Error('read.json ' + r.status);
                     return r.json();
@@ -2267,6 +2101,13 @@
                 ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         }
 
+        // read.json is plain text with one piece of markup: *asterisks* for
+        // italics -- foreign words (*wadj*) and titles (*Opticks*). Escaped
+        // first, so nothing else in the file can become HTML.
+        function prose(s) {
+            return esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        }
+
         function renderBook() {
             const book = document.getElementById('book');
 
@@ -2284,11 +2125,33 @@
                     : `background-image:linear-gradient(135deg,${esc(e.swatch)},`
                       + `color-mix(in oklab, ${esc(e.swatch)} 55%, #000))`;
 
-                const warn = e.status === 'verified' ? '' :
-                    '<p class="unverified">Unverified — this text has not been '
-                    + 'checked against a source.</p>';
+                // A paragraph counts as checked only if it lists a source and
+                // has nothing `pending`, so an entry marked 'verified' with a
+                // gap in it still says so. Its sources still print either way.
+                const hasSources = p => Array.isArray(p.sources) && p.sources.length > 0;
+                const sourced = p => hasSources(p) && !p.pending;
+                const gaps = e.body.filter(p => !sourced(p)).length;
+                const warn = e.status !== 'verified'
+                    ? '<p class="unverified">Unverified — this text has not been '
+                      + 'checked against a source.</p>'
+                    : gaps
+                    ? `<p class="unverified">${gaps === 1 ? 'One paragraph' : gaps + ' paragraphs'}`
+                      + ' here, marked with a dotted rule, ' + (gaps === 1 ? 'has' : 'have')
+                      + ' not been checked against a source yet.</p>'
+                    : '';
 
-                const body = e.body.map(p => `<p>${esc(p.text)}</p>`).join('');
+                const body = e.body.map(p =>
+                    `<p${sourced(p) ? '' : ' class="unsourced"'}>${prose(p.text)}</p>`).join('');
+
+                // Printed under the entry, each source once, in the order the
+                // text first leans on it. Only http(s) links become links.
+                const seen = new Set();
+                const list = e.body.flatMap(p => hasSources(p) ? p.sources : [])
+                    .filter(s => !seen.has(s.label) && seen.add(s.label))
+                    .map(s => /^https?:\/\//.test(s.url || '')
+                        ? `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a></li>`
+                        : `<li>${esc(s.label)}</li>`).join('');
+                const sources = list ? `<div class="sources"><h3>Sources</h3><ol>${list}</ol></div>` : '';
 
                 const inserts = e.inserts.length
                     ? `<div class="inserts">${e.inserts.map(src =>
@@ -2302,7 +2165,7 @@
                      + `<div class="plate-hex">${esc(e.swatch)}</div></div></div>`
                      + `<div class="measure">${warn}`
                      + `<p class="standfirst">${esc(e.standfirst)}</p>`
-                     + `<div class="prose">${body}</div>${inserts}</div></article>`;
+                     + `<div class="prose">${body}</div>${inserts}${sources}</div></article>`;
             }).join('');
 
             book.innerHTML = `<div class="chips" id="chips">${chips}</div>${spreadsHtml}`;
@@ -2401,13 +2264,26 @@
 
         document.getElementById('btn-measure').addEventListener('click', () => setMeasuring(!measuring));
 
-        document.getElementById('btn-ground').addEventListener('click', () => {
-            ground = ground === '#FFFFFF' ? '#000000' : '#FFFFFF';
+        function setGround(g) {
+            ground = g;
             document.getElementById('btn-ground').textContent =
                 ground === '#FFFFFF' ? 'on white' : 'on black';
             paintStage();
             paintBook();
             render();
+        }
+
+        // The ground starts on the system's light/dark setting and follows it
+        // when it changes (a sunset switch, say) -- until the button is
+        // pressed. After that the person's own choice wins for the visit.
+        const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+        let groundChosen = false;
+        const systemGround = () => darkQuery.matches ? '#000000' : '#FFFFFF';
+        darkQuery.addEventListener('change', () => { if (!groundChosen) setGround(systemGround()); });
+
+        document.getElementById('btn-ground').addEventListener('click', () => {
+            groundChosen = true;
+            setGround(ground === '#FFFFFF' ? '#000000' : '#FFFFFF');
         });
 
         document.getElementById('btn-presets').addEventListener('click', openPresets);
@@ -2416,6 +2292,7 @@
         // Init. setBridgeMode paints the segmented control and renders, so this
         // is one pass, not a render followed by a correcting render.
         loadState();
+        if (systemGround() !== ground) setGround(systemGround());
         setBridgeMode(bridgeMode);
     </script>
 </body>

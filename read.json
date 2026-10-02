@@ -1,18 +1,42 @@
 {
-  "_comment": "Content for the Read page. Every entry carries a status: 'unverified' means the prose has not been checked against a source and the page SAYS SO on screen. Paragraphs may carry their own `source`; one without a source is not a claim this book is making yet. Do not flip a status to 'verified' without filling in sources.",
+  "_comment": "Content for the Read page. Every paragraph lists its `sources`, each a label and a URL; the page prints them under the entry. A paragraph whose `sources` is empty is not checked yet: it carries `pending` (what is missing) and the page marks it. An entry is shown as verified only when its `status` is 'verified' AND every paragraph has sources. Sources are papers, museums, dictionaries and primary texts; Wikipedia was used to find them and is not cited. Researched 2026-10-02; written to the Verbalizer guide (shared/verbalizer v0.3.0). *Asterisks* mark italics: foreign words and titles.",
   "entries": [
     {
       "id": "red",
       "name": "Red",
       "swatch": "#CE2029",
-      "standfirst": "The first colour humans reached for, and the one we never put down.",
-      "status": "unverified",
+      "standfirst": "The first color humans reached for, and the one we never put down.",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "The color red has been used by humans since prehistoric times. It was one of the first colors to be used in cave paintings, and it can be found in many ancient artifacts. Red has been used in many cultures to signify danger, power, and strength.", "source": null },
-        { "text": "Red has been used to represent many things throughout history, from danger to love. It is a powerful and vibrant color, and it can be used to create many different moods and feelings.", "source": null },
-        { "text": "On the monochromatic scale, red is the most vibrant and intense of the primary colors. It is a warm color that can be used to create a sense of energy, passion, and excitement.", "source": null }
+        {
+          "text": "People were grinding red ochre long before anyone painted a cave. At Blombos Cave in South Africa, archaeologists found a workshop about 100,000 years old: two abalone shells holding a liquid ochre mixture, with the grindstones, hammerstones, bone and charcoal used to make it. Nobody knows what the mixture was for. Decoration and protecting the skin are both possible.",
+          "sources": [
+            {
+              "label": "Henshilwood et al., \"A 100,000-Year-Old Ochre-Processing Workshop at Blombos Cave, South Africa\", Science 334 (2011)",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/21998386/"
+            }
+          ]
+        },
+        {
+          "text": "Languages reach for red early too. In 1969 Brent Berlin and Paul Kay compared the basic color words of many languages and proposed an order: every language has words for dark and light, and when a language has a third color word, it is red. Their later World Color Survey, covering 110 languages, refined the order after that point.",
+          "sources": [
+            {
+              "label": "C. L. Hardin, \"Berlin and Kay Theory\", Encyclopedia of Color Science and Technology (Springer, 2013)",
+              "url": "https://sites.socsci.uci.edu/~kjameson/ECST/Hardin_BerlinKayTheory.pdf"
+            }
+          ]
+        },
+        {
+          "text": "The most valuable red of the colonial era came from an insect. Cochineal, a dye made from a small insect native to the Americas, became so important to Spain that only New World silver was a larger export.",
+          "sources": [
+            {
+              "label": "Peter B. G. Shoemaker, \"Red All Over: How a Tiny Bug Changed the Way We See the World\", Humanities (NEH), July/August 2015",
+              "url": "https://www.neh.gov/humanities/2015/julyaugust/feature/red-all-over-how-tiny-bug-changed-the-way-we-see-the-world"
+            }
+          ]
+        }
       ]
     },
     {
@@ -20,58 +44,167 @@
       "name": "Orange",
       "swatch": "#E87722",
       "standfirst": "English had no word for it until the fruit arrived and lent its own.",
-      "status": "unverified",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "The color orange has been around since ancient times, but it wasn't until the 18th century that it was officially added to the monochromatic scale. In 1704, Isaac Newton created the first official color wheel and included orange in his color spectrum. He described orange as a mix of red and yellow, and he believed it was the product of the two primary colors.", "source": null },
-        { "text": "Orange was then categorized into two distinct hues: reddish-orange and yellowish-orange. The reddish-orange hue was seen as a warmer and more vibrant color, while the yellowish-orange hue was seen as a softer and more muted color.", "source": null },
-        { "text": "The color orange began to gain popularity in the 19th century, as it was used in various art movements such as Impressionism and Expressionism. It was also used in fashion and interior design to create a cheerful and inviting atmosphere.", "source": null },
-        { "text": "Today, orange is still a popular color and is used in a variety of contexts, from branding and advertising to art and design. It is also a popular color in the home, as it is believed to bring a sense of warmth and energy to any room.", "source": null }
+        {
+          "text": "English named the color after the fruit. The fruit's name traveled west from the Sanskrit *nāraṅga*, through Persian and Arabic, into Old French, and reached English in the late 14th century. Before that, Middle English called an orange shade citrine or saffron.",
+          "sources": [
+            {
+              "label": "Online Etymology Dictionary, \"orange\"",
+              "url": "https://www.etymonline.com/word/orange"
+            }
+          ]
+        },
+        {
+          "text": "The color sense came more than a century later. A will from 1512 describes something as \"orenge colour\", and an English law of 1557 regulating woolen cloth uses orange as a color in its own right. The often-quoted date of 1502, for clothing bought for Margaret Tudor, is usually cited without the document it comes from.",
+          "sources": [
+            {
+              "label": "Wordorigins.org, \"orange\"",
+              "url": "https://www.wordorigins.org/big-list-entries/orange"
+            }
+          ]
+        },
+        {
+          "text": "Newton found two oranges the eye can't tell apart. In *Opticks* (1704) he notes that red and yellow light mixed together look like the orange of the spectrum. Pass the mixture through a prism and it splits back into red and yellow; the spectrum's own orange stays orange.",
+          "sources": [
+            {
+              "label": "Isaac Newton, Opticks (1704), Book I, Part II, Proposition IV",
+              "url": "https://www.gutenberg.org/files/33504/33504-h/33504-h.htm"
+            }
+          ]
+        }
       ]
     },
     {
       "id": "yellow",
       "name": "Yellow",
       "swatch": "#EFCB33",
-      "standfirst": "Beautiful, ancient, and for most of its history, poisonous.",
-      "status": "unverified",
+      "standfirst": "The oldest yellow is harmless clay. Many later ones were arsenic and lead.",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "The color yellow has a long history in relation to the monochromatic scale. Yellow is one of the oldest known colors, and it is believed to have been used as a pigment as early as 30,000 BC. The first recorded use of yellow as a color name in English was in the year 1290.", "source": null },
-        { "text": "In the early days of color theory, yellow was categorized as one of the three primary colors along with red and blue. This theory was developed by the French physicist Michel-Eugene Chevreul in the early 19th century. He believed that all other colors could be mixed from these three primaries.", "source": null },
-        { "text": "Yellow is also an important part of the traditional color wheel, which is based on the three primary colors. In this system, yellow is placed between green and orange and is the complement of blue.", "source": null },
-        { "text": "In the modern world, yellow is often used to represent happiness, optimism, and joy. It is also used to signify caution and warning.", "source": null }
+        {
+          "text": "The oldest yellow is earth. Yellow ochre is clay colored by goethite, an iron mineral, and the yellows on the walls of Lascaux, painted more than 17,000 years ago, are goethite.",
+          "sources": [
+            {
+              "label": "French Ministry of Culture, Lascaux: \"The raw materials\"",
+              "url": "https://archeologie.culture.gouv.fr/lascaux/en/raw-materials"
+            },
+            {
+              "label": "French Ministry of Culture, Lascaux: \"Dating the figures at Lascaux\"",
+              "url": "https://archeologie.culture.gouv.fr/lascaux/en/dating-figures-lascaux"
+            }
+          ]
+        },
+        {
+          "text": "Painters' other early yellows were made from arsenic and lead. Orpiment, an arsenic sulfide, takes its name from the Latin *auripigmentum*, gold pigment, and was in use from antiquity until about the 19th century. Lead-tin yellow appears in paintings from around 1300 and was used by Raphael, Titian, Rembrandt and Vermeer. It dropped out of use around 1750 and was forgotten until 1941.",
+          "sources": [
+            {
+              "label": "ColourLex, \"Orpiment\"",
+              "url": "https://colourlex.com/project/orpiment/"
+            },
+            {
+              "label": "ColourLex, \"Lead-tin yellow\"",
+              "url": "https://colourlex.com/project/lead-tin-yellow/"
+            }
+          ]
+        },
+        {
+          "text": "Van Gogh painted his *Sunflowers* with chrome yellow, a lead chromate, and the paint is changing. In 2015 a team led by Letizia Monico found that the paler chrome yellow in the painting darkens in light as its chromium is chemically reduced, and mapped the areas most at risk.",
+          "sources": [
+            {
+              "label": "Monico et al., Angewandte Chemie International Edition (2015), as reported by ScienceDaily, \"Why van Gogh's Sunflowers are wilting\"",
+              "url": "https://www.sciencedaily.com/releases/2015/10/151020103822.htm"
+            }
+          ]
+        }
       ]
     },
     {
       "id": "green",
       "name": "Green",
       "swatch": "#3F7A4F",
-      "standfirst": "The colour of life, and for one century, of arsenic.",
-      "status": "unverified",
+      "standfirst": "The color of life, and for more than a century and a half, of arsenic.",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "Green has been a part of the monochromatic color scale since its inception. The first known use of the color green dates back to ancient Egypt, where it was used to represent life and fertility. The ancient Greeks and Romans also used green to represent hope and joy.", "source": null },
-        { "text": "The modern understanding of green as a color on the monochromatic scale was first developed by Isaac Newton in the 17th century. He used a prism to separate white light into its component colors, which he then arranged into a spectrum of seven distinct hues. This spectrum became the basis for the modern color wheel, with green falling between blue and yellow.", "source": null },
-        { "text": "Since Newton's time, green has been an important part of the monochromatic color scale. It is often used to represent nature and growth, as well as being a sign of hope and a symbol of renewal. In art and design, green is often used to create a calming atmosphere or to add a touch of vibrancy to a composition.", "source": null }
+        {
+          "text": "The Greek painters Rome remembered best are said to have worked without green. Pliny the Elder, writing in the first century, says Apelles, Aetion, Melanthius and Nicomachus used four colors: a white, a yellow ochre, a red and a black.",
+          "sources": [
+            {
+              "label": "Pliny the Elder, Natural History, Book 35, chapter 50",
+              "url": "https://www.attalus.org/pliny/hn35a.html"
+            }
+          ]
+        },
+        {
+          "text": "Egypt tied green to rebirth. The hieroglyph *wadj*, a papyrus stalk, meant green or fresh, and the papyrus was closely associated with rebirth and regeneration. Malachite, a copper carbonate, was ground for green paint.",
+          "sources": [
+            {
+              "label": "The Metropolitan Museum of Art, \"Wadj (papyrus stalk) from string of amulets\", 25.3.169e",
+              "url": "https://www.metmuseum.org/art/collection/search/694161"
+            },
+            {
+              "label": "ColourLex, \"Malachite\"",
+              "url": "https://colourlex.com/project/malachite/"
+            }
+          ]
+        },
+        {
+          "text": "From the late 1770s the most popular green was arsenic. Scheele's green, a copper arsenite made by the Swedish chemist Carl Wilhelm Scheele, colored wallpaper, ball gowns, curtains and even sweets through the 1800s. In 1839 the German chemist Leopold Gmelin warned that damp rooms papered in it gave off a mousy smell, which he traced to an arsenic compound, and William Morris dismissed the whole scare as folly. Its successor, emerald green, a copper acetoarsenite, stayed in use until the second half of the 20th century.",
+          "sources": [
+            {
+              "label": "J. C. Haslam, \"Deadly décor: a short history of arsenic poisoning in the nineteenth century\", Res Medica 21 (2013)",
+              "url": "https://journals.ed.ac.uk/resmedica/article/download/182/799/0"
+            },
+            {
+              "label": "ColourLex, \"Emerald green\"",
+              "url": "https://colourlex.com/project/emerald-green/"
+            }
+          ]
+        }
       ]
     },
     {
       "id": "blue",
       "name": "Blue",
       "swatch": "#1D4FA8",
-      "standfirst": "One mine in Afghanistan, and a pigment worth more than gold.",
-      "status": "unverified",
+      "standfirst": "A stone from Afghanistan, and a pigment worth more than gold.",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "The color blue has been around for centuries, but it was not until the 19th century that the color was first categorized and given a name. The first use of the word 'blue' to describe a color was in the English language in the late 14th century.", "source": null },
-        { "text": "The first use of the word blue in relation to the monochromatic scale was by the French chemist Michel Eugene Chevreul in 1814. Chevreul was the first to use the word blue to describe a single color on the monochromatic scale. He divided the spectrum of visible light into seven colors: red, orange, yellow, green, blue, indigo, and violet.", "source": null },
-        { "text": "The discovery of blue pigments in ancient times is not well documented, but it is believed that the ancient Egyptians were the first to use blue pigments, as evidenced by their use of blue in their artwork. Blue was also used in ancient Greek art, as well as in the art of the Middle Ages.", "source": null },
-        { "text": "In the modern day, blue is used in a variety of ways. It is the color of the sky and the ocean, and it is often used to denote peace, tranquility, and calmness. Blue is also used in a variety of color schemes, from monochromatic to complementary. Blue is a popular color in fashion, interior design, and graphic design.", "source": null }
+        {
+          "text": "Blue is the oldest color anyone is known to have manufactured. Egyptian blue, the earliest known synthetic pigment, was being made by about 3100 BC by firing silica, copper, calcium and a sodium salt together at high heat.",
+          "sources": [
+            {
+              "label": "Harvard Gazette, \"When Egyptians made blue\" (April 2026), quoting Carolyn Riccardelli, Metropolitan Museum of Art",
+              "url": "https://news.harvard.edu/gazette/story/2026/04/when-egyptians-made-blue/"
+            }
+          ]
+        },
+        {
+          "text": "In Europe the finest blue came from Afghanistan. Ultramarine was made from lapis lazuli mined there, and its name is medieval Latin for beyond the sea. The best grades could be worth more than gold. Patrons paid for the exact amount they wanted used in a painting, and the Virgin Mary's robe was often painted in it to mark her sacred status.",
+          "sources": [
+            {
+              "label": "The National Gallery, London, \"Colour Stories: Blue\"",
+              "url": "https://www.nationalgallery.org.uk/podcast/colour-stories-blue"
+            }
+          ]
+        },
+        {
+          "text": "English borrowed its word for blue. Blue arrived around 1300 from Old French *bleu*. Old English had *hǣwen*, a word that covered both blue and gray.",
+          "sources": [
+            {
+              "label": "Online Etymology Dictionary, \"blue\"",
+              "url": "https://www.etymonline.com/word/blue"
+            }
+          ]
+        }
       ]
     },
     {
@@ -79,14 +212,46 @@
       "name": "Purple",
       "swatch": "#7A4FA3",
       "standfirst": "Thousands of sea snails for a single gram, until an accident in 1856.",
-      "status": "unverified",
+      "status": "verified",
       "plate": null,
       "inserts": [],
       "body": [
-        { "text": "The color purple has been around for centuries and is one of the oldest colors on the monochromatic scale. It is believed that ancient Egyptians were the first to create a purple dye from a type of sea snail. This dye was used to color fabrics and clothing for the wealthy and powerful.", "source": null },
-        { "text": "Throughout history, the color purple has been associated with royalty, power, and wealth. In the 16th century, the color purple was so rare and expensive that only royalty could afford to wear it. The color was so highly valued that it was even used as currency in some parts of the world.", "source": null },
-        { "text": "In the 19th century, purple was added to the monochromatic color scale as a separate color. It was one of the first colors to be categorized in this way and was used to denote a range of shades from light lavender to deep violet.", "source": null },
-        { "text": "Today, purple is still seen as a color of luxury and power. It is often used in fashion, home decor, and branding to convey a sense of sophistication and elegance.", "source": null }
+        {
+          "text": "The purple of antiquity came from sea snails. When the chemist Paul Friedländer worked out the dye's structure in 1909, he needed 12,000 *Murex brandaris* snails to get 1.4 grams of it.",
+          "sources": [
+            {
+              "label": "Wolk and Frimer, \"Preparation of Tyrian Purple (6,6′-Dibromoindigo): Past and Present\", Molecules 15 (2010)",
+              "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6264235/"
+            }
+          ]
+        },
+        {
+          "text": "The dye is named for Tyre, the Phoenician port, but it is probably older on Crete. The earliest Phoenician dye works found so far date to the 15th and 14th centuries BC, while shell heaps and tablets in the Aegean suggest Minoans were making it before 1750 BC.",
+          "sources": [
+            {
+              "label": "Robert R. Stieglitz, \"The Minoan Origin of Tyrian Purple\", Biblical Archaeologist 57:1 (1994), pp. 46-54",
+              "url": "https://www.jstor.org/stable/3210395"
+            }
+          ]
+        },
+        {
+          "text": "In England, the law kept purple for the royal family. Under Elizabeth I's statutes of apparel, enforced from 1574, only the monarch and the closest royal relatives could wear silk of the color purple.",
+          "sources": [
+            {
+              "label": "Shakespeare's Globe, \"Elizabethan sumptuary laws: Fashion policing in Shakespeare's England\" (2019)",
+              "url": "https://www.shakespearesglobe.com/discover/blogs-and-features/2019/04/16/elizabethan-sumptuary-laws-fashion-policing-in-shakespeares-england/"
+            }
+          ]
+        },
+        {
+          "text": "Purple got cheap by accident. In 1856 William Henry Perkin, 18 years old, was trying to make quinine from chemicals derived from coal tar and made mauve instead, the first synthetic dye to be sold. He opened a factory near London the next year.",
+          "sources": [
+            {
+              "label": "Science History Institute, \"William Henry Perkin\"",
+              "url": "https://www.sciencehistory.org/education/scientific-biographies/william-henry-perkin/"
+            }
+          ]
+        }
       ]
     }
   ]

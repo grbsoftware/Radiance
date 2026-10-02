@@ -3,6 +3,64 @@
 Read `RESEARCH.md` first for the measurements and the papers. This file is
 state: what exists, what is undecided, and what has already been ruled out.
 
+## 2026-10-02 — the engine is shared, and Read has a new layout
+
+All on `read-page`, **uncommitted** at the end of the session, waiting for
+Gary to look at the layout.
+
+- **`radiance-color.js` is the colour engine,** pulled out of `index.html` and
+  promoted to `C:\Users\grben\shared\radiance-color` as v1.0.0 (Gary asked
+  for it). One global, `RadianceColor`; `index.html` loads it with a
+  `<script>` tag and destructures what it uses at the top of its script.
+  `midpointColor` takes the mode as an argument now, and the app keeps
+  `bridgeMode` itself. There's no change in behaviour: the old inline maths and the
+  engine agree on 40,000 random pairs in both modes. From here on, colour
+  maths changes go in that file and ship with a version bump through
+  `Architecture\promote.py`. Consumers pin copies.
+- **Read: a square plate beside the text, tops level.** Gary: a full-bleed
+  plate of flat colour "will appear like an unfinished site". Then: "further
+  to the left so that the text remains centered for the reader". So from
+  1000px up, the TEXT is centred on the screen (three columns, `1fr 34rem 1fr`)
+  and the square sits 24px from the left edge, shrinking to fit its margin:
+  400px at 1600 wide, 285px at 1280, 157px at 1000. At 641–999px there's no
+  margin wide enough for a square, so plate and text centre as a pair. Below
+  640px it stacks. The name and hex are sized in `cqw` off the plate itself,
+  so "Purple" fits at every size. Measured: text centre 0px off the screen centre at
+  1000/1280/1600, tops level at every width, no sideways scroll at 390.
+- **The stepper now hides on Read.** `.count-group { display:flex }` outranked
+  the `[hidden]` attribute, so setting `.hidden` did nothing.
+- **sw.js: the worker had never installed in production.** Its cache list
+  used `/index.html`, but Pages serves the app at `/Radiance/`, so the list
+  pointed at the hub root, where `manifest.json` and the icons 404 — and
+  `cache.addAll` rejects on one failure. The paths are relative now, and the engine and
+  `read.json` are on the list, at `radiance-v7`. **Merging turns offline caching on
+  for real users for the first time**, which is when the bump rule starts to matter.
+- **`read.json` is rewritten from sources,** written to the Verbalizer guide
+  (`shared\verbalizer`). Every paragraph lists `sources` and the page prints
+  them under the entry. Gary asked "are we fully trusting wikipedia?", so
+  Wikipedia is now only for finding leads. Citations go to the paper (Henshilwood 2011),
+  the museum (National Gallery, French Ministry of Culture), a reference
+  (ColourLex, Etymonline) or the primary text (Newton's *Opticks*, Pliny).
+  That raised the standard and changed three earlier verdicts, written at the
+  top of `READ-FACTCHECK.md`.
+- **The ground follows the system's dark/light setting** (Gary asked for
+  it). It starts on `prefers-color-scheme` and follows changes until the
+  ground button is pressed; then the person's choice wins for that visit. It
+  isn't saved, same as before. Checked with the pane's colour-scheme emulation.
+- **Two sources were blocked** (JSTOR, the Met's rate limit), and Gary
+  fetched both as screenshots (`OneDrive\Pictures\research`). The Met page backs
+  wadj = green/fresh/rebirth but NOT Osiris's green skin, so that claim was cut.
+  Stieglitz p. 49 gives "before 1750 BCE" as his reading of the evidence, so
+  the text says "suggest". Every paragraph is sourced now. A paragraph with
+  `pending` gets a dotted rule and a notice. Ask Gary for blocked pages rather
+  than citing a search summary.
+- The web fetch tool summarises pages through a small model, so its "quotes"
+  can be paraphrase. Where a quote mattered, the source was downloaded and
+  read directly: *Opticks* as Gutenberg text, PDFs through `pypdf`.
+- Browsers cache `read.json` between edits. In the pane, run
+  `fetch('read.json', {cache: 'reload'})` before reloading, or the page renders
+  the old text and looks like a broken renderer.
+
 ## Where the code is
 
 **`main`, merged and pushed.** GitHub Pages deploys from `main`, so everything
@@ -190,8 +248,17 @@ panel edge at 920.
 
 ## Verification gotchas in this setup
 
-- **Screenshots do not work** — the browser pane is not compositing. Pull the
-  SVG out with `javascript_tool` and send it as a file instead.
+- **Screenshots work again** (checked 2026-10-02; they did not on 2026-08-06).
+  The pane shrinks a large emulated viewport to its own width, though, so a
+  1280px layout comes back unreadable. For real-size shots, drive headless
+  Edge over CDP: `msedge --headless=new --remote-debugging-port=...`, then
+  `Emulation.setDeviceMetricsOverride` and `Page.captureScreenshot` over the
+  WebSocket. Node 24 has `fetch` and `WebSocket` built in, so nothing needs
+  installing.
+- **Bind the dev server to 127.0.0.1.** `python -m http.server` listens on
+  every interface by default, and on a Wi-Fi Windows calls Public that pops a
+  firewall prompt Gary had never seen. `.claude/launch.json` (untracked, in
+  `.git/info/exclude`) passes `--bind 127.0.0.1`.
 - **CSS transitions never advance** for the same reason. A transitioned
   property reads frozen at its start value and looks like a broken cascade.
   Add `*{transition:none !important}` and call `.getAnimations().forEach(a =>
