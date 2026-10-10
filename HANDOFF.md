@@ -3,6 +3,26 @@
 Read `RESEARCH.md` first for the measurements and the papers. This file is
 state: what exists, what is undecided, and what has already been ruled out.
 
+## 2026-10-10 — SEO's asks
+
+SEO's audit (`C:\Users\grben\SEO`, checklist `PLAYBOOK.md`) asked for four
+fixes to the live page, and all four went into the `<head>` of `index.html`. sw is
+at `radiance-v9`.
+
+- Title and `og:title`: `Radiance · color palettes that blend evenly`. The
+  name alone told a searcher nothing.
+- `<link rel="canonical">` to `https://grbsoftware.github.io/Radiance/`.
+- One `<h1>` as the first thing in `<body>`, kept off screen with `.sr-only`.
+  The design has no visible title and we kept it that way. Don't add a
+  second `<h1>`, because the audit flags more than one.
+- `WebApplication` JSON-LD, linked to the hub's `Organization` by
+  `@id`. Keep its `description` the same as the meta description.
+
+Checked by running the audit's own `audit_page` on the local page, which
+reported no problems and no warnings. The hub's JSON-LD still says "2 to 5
+anchor colors". That's the hub's file, so it was sent as an ask in
+`local.json`.
+
 ## 2026-10-02 — the engine is shared, and Read has a new layout
 
 **LIVE.** `read-page` was fast-forwarded into `main` and pushed (`d979eed`), so

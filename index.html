@@ -9,24 +9,52 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <title>Radiance</title>
+    <title>Radiance · color palettes that blend evenly</title>
+    <!-- Pages serves /Radiance and /Radiance/, and artifact copies are more
+         copies; this names the real one. -->
+    <link rel="canonical" href="https://grbsoftware.github.io/Radiance/">
     <!-- Link previews. og:image must be an absolute URL; the image is the
          sunflower from Show, 1200x630, made with the controls hidden. -->
     <meta name="description" content="Pick 2 to 7 anchor colors and Radiance fills in the colors between them, mixed in OKLab so each step looks halfway.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://grbsoftware.github.io/Radiance/">
-    <meta property="og:title" content="Radiance">
+    <meta property="og:title" content="Radiance · color palettes that blend evenly">
     <meta property="og:description" content="Pick 2 to 7 anchor colors and Radiance fills in the colors between them, mixed in OKLab so each step looks halfway.">
     <meta property="og:image" content="https://grbsoftware.github.io/Radiance/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Radiance: a ring of colored drops on black, with the name in white">
     <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Radiance",
+        "url": "https://grbsoftware.github.io/Radiance/",
+        "description": "Pick 2 to 7 anchor colors and Radiance fills in the colors between them, mixed in OKLab so each step looks halfway.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Any (web browser)",
+        "image": "https://grbsoftware.github.io/Radiance/og-image.png",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        "author": {"@type": "Organization", "@id": "https://grbsoftware.github.io/#org", "name": "grbsoftware", "url": "https://grbsoftware.github.io/"}
+    }
+    </script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        /* The page's heading, for search engines and screen readers. The
+           design has no visible title, so it is kept off screen. */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
         }
         
         html, body {
@@ -920,6 +948,7 @@
     </style>
 </head>
 <body>
+    <h1 class="sr-only">Radiance: color palettes that blend evenly</h1>
     <div class="palette" id="palette"></div>
 
     <div class="stage on-white" id="stage">
